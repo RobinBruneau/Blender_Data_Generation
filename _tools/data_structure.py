@@ -88,8 +88,9 @@ class CameraManager():
 
 class Light():
 
-    def __init__(self,type,direction,color,strength):
+    def __init__(self,id,type,direction,color,strength):
 
+        self.id = id
         self.type = type
         self.direction = direction
         self.color = color
@@ -107,29 +108,29 @@ class LightManager():
 
     def fixed_ambiant(self,color,strength):
         self.clean_lights()
-        l = Light(type="world",direction=None,color=color,strength=strength)
+        l = Light(id="0",type="world",direction=None,color=color,strength=strength)
         self.lights.append(l)
         self.fixed_light = True
 
     def fixed_directionnals(self,directions,colors,strengths):
         self.clean_lights()
         for k in range(len(directions)):
-            l = Light(type="sun", direction=directions[k], color=colors[k], strength=strengths[k])
+            l = Light(id=str(k),type="sun", direction=directions[k], color=colors[k], strength=strengths[k])
             self.lights.append(l)
         self.fixed_light = True
 
-    def semi_sphere_directionnal_per_camera(self,cameras,number_lights,colors,strengths):
+    def semi_sphere_directionnal_per_camera(self,cameras,number_lights,colors,strengths,max_angle=80):
         self.clean_lights()
         for k,cam in enumerate(cameras) :
             cam_lights = []
             points = generate_points_on_sphere(radius=1,number_points=2*number_lights)
             camera_direction = cam.get_looking_direction()
             cos_angle = np.sum(-points * camera_direction.T,axis=1)
-            min_cos = np.cos(80*np.pi/180)
+            min_cos = np.cos(max_angle*np.pi/180)
             ind = np.where(cos_angle >= min_cos)[0]
             directions = -points[ind,:]
-            for direction in directions :
-                l = Light(type="sun", direction=direction, color=colors[k], strength=strengths[k])
+            for i,direction in enumerate(directions) :
+                l = Light(id=str(k)+"_"+str(i),type="sun", direction=direction, color=colors[k], strength=strengths[k])
                 cam_lights.append(l)
             self.lights.append(cam_lights)
         self.fixed_light = False
@@ -164,7 +165,7 @@ class Object():
         self.scale = scale
 
     def as_sphere(self,location,radius,subdivisions=4):
-        self.type = "cube"
+        self.type = "sphere"
         self.radius = radius
         self.location = location
         self.subdivisions = subdivisions
@@ -184,7 +185,7 @@ class Scene():
 
     def __init__(self,cameras,lights,object,medium,output_path):
 
-        assert(object.type=="path")
+        assert(object.type=="path" or object.type=="sphere")
 
         self.lights = lights
         self.cameras = cameras
@@ -197,6 +198,8 @@ class Scene():
         self.render_with_obj_mask = False
         self.render_with_medium_mask = False
         self.save_scene = True
+        self.save_lights = False
+        self.stereo_photometry = False
 
     def render_with_medium(self,state=True):
         self.render_with = state
@@ -206,6 +209,12 @@ class Scene():
     def render_without_medium(self,state):
         self.render_without = state
         self.render_without_obj_mask = state
+
+    def save_lights_params(self,state):
+        self.save_lights = state
+
+    def stereo_photometry_rendering(self,state):
+        self.stereo_photometry = state
 
 
 
