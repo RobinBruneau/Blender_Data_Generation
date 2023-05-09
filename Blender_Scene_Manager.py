@@ -1,4 +1,5 @@
 from _tools.data_structure import Scene,CameraManager,LightManager,Object
+import numpy as np
 
 def generate_blender_scene():
 
@@ -6,7 +7,7 @@ def generate_blender_scene():
     object_path = "D:/INPUT/Graphosoma/Graphosoma.obj"
     object_texture_path = "D:/INPUT/Graphosoma/Graphosoma.png"
     medium_path = ""
-    output_path = "D:/PhD/Projects/Blender_Data_Generation/OUTPUT/test_1/"
+    output_path = "D:/PhD/Projects/Blender_Data_Generation/OUTPUT/MVS_graphosoma_100/"
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -14,7 +15,7 @@ def generate_blender_scene():
     #    - single_camera (give your location and rotation/look_at)
     #    - multi_cameras (gives your locations and details)
     cm = CameraManager()
-    cm.sphere_cameras(radius=3,number_cameras=16,lens=50)
+    cm.sphere_cameras(radius=3,number_cameras=100,lens=50)
     #cm.cameras = [cm.cameras[0]]
 
     # GENERATE LIGHTS
@@ -23,12 +24,14 @@ def generate_blender_scene():
     #    - semi_sphere_directionnal_per_camera (a set of directional lights for each camera)
     lm = LightManager()
     lm.fixed_ambiant(color=(1.0,1.0,1.0,1.0),strength=1)
-    #lm.semi_sphere_directionnal_per_camera(cm.cameras,20,colors=[(0.0,0.0,0.0)],strengths=[1])
+    #lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras,number_lights=10,colors=[(1.0,1.0,1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))],max_angle=70)
+    #lm.fixed_directionnals(directions=[np.array([1.0,0.0,0.0]).reshape(3,1),np.array([0.0,1.0,0.0]).reshape(3,1),np.array([0.0,0.0,1.0]).reshape(3,1)],colors = [(1.0,1.0,1.0) for i in range(3)],strengths = [np.pi,np.pi,np.pi])
 
     # OBJECT
     #   - from_path (loading a .obj mesh)
     object = Object()
-    object.from_path(path=object_path,texture_path=object_texture_path,scale=[0.07,0.07,0.07])
+    #object.as_sphere(location=[0.0,0.0,0.0],radius=0.25,subdivisions=5)
+    object.from_path(path=object_path,texture_path=object_texture_path,scale=[1.0,1.0,1.0])
 
     # MEDIUM
     #    - as_cube (a cube shape)
@@ -45,6 +48,8 @@ def generate_blender_scene():
     #   - render_without_medium ((de)activate the rendering without the refractive medium)
     scene = Scene(cm,lm,object,medium,output_path)
     scene.render_with_medium(state=False)
-    scene.render_without_medium(state=False)
+    scene.render_without_medium(state=True)
+    scene.save_lights_params(state=False)
+    scene.stereo_photometry_rendering(state=False)
 
     return scene
