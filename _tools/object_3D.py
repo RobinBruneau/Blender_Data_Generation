@@ -90,10 +90,12 @@ class object_3D():
             tab_normals[k,:] = ff.normal
             tab_centers[k,:] = ff.center
 
+
         f=open(output_file,'wb')
         data = {"vertices":tab_vertices,"faces":tab_faces,"centers":tab_centers,"normals":tab_normals}
         pickle.dump(data,f,protocol=pickle.HIGHEST_PROTOCOL)
         f.close()
+        np.savez(output_file[:-3] + "npz", **data)
 
     def check_doublon(self):
 

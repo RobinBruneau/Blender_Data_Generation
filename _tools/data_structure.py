@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 def generate_points_on_sphere(radius,number_points):
     points = []
@@ -15,6 +16,7 @@ def generate_points_on_sphere(radius,number_points):
             location = [radius * np.sin(v) * np.cos(phi), radius * np.sin(v) * np.sin(phi), radius * np.cos(v)]
             points.append(location)
     points = np.array(points).T
+    np.random.seed(1)
     random_rotation = euler_to_matrix(np.random.random(3)*2*np.pi)
     points = random_rotation @ points
     return points.T
@@ -46,7 +48,7 @@ class Camera():
 
     def get_looking_direction(self):
         if self.is_looking_at :
-            d = self.looking_at-self.location
+            d = np.array(self.looking_at)-np.array(self.location)
             return (d/np.linalg.norm(d)).reshape((3,1))
         else :
             return euler_to_matrix(self.rotation) @ np.array([[0],[0],[-1]])
@@ -64,37 +66,45 @@ class CameraManager():
         angles = np.linspace(0,2*np.pi,number_cameras+1)[:-1]
         for k in range(len(angles)):
             location = np.array([radius*np.cos(angles[k]),radius*np.sin(angles[k]),height])
-            c = Camera(id=0, location=location, rotation=None, lens=lens, is_looking_at=True, looking_at=np.array([0.0,0.0,0.0]))
+            c = Camera(id="000", location=location, rotation=None, lens=lens, is_looking_at=True, looking_at=np.array([0.0,0.0,0.0]))
             self.cameras.append(c)
 
-    def sphere_cameras(self,radius,number_cameras,lens):
+    def sphere_cameras(self,radius,number_cameras,lens,type):
         self.clean_cameras()
-        locations = generate_points_on_sphere(radius,number_cameras)
+        self.type = type
+        locations = generate_points_on_sphere(radius,int(1.5*number_cameras))
         for k,location in enumerate(locations) :
-            c = Camera(id=k, location=np.array(location), rotation=None, lens=lens, is_looking_at=True,
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=np.array(location), rotation=None, lens=lens, is_looking_at=True,
                        looking_at=np.array([0.0, 0.0, 0.0]))
             self.cameras.append(c)
+        random.shuffle(self.cameras)
+        self.cameras = self.cameras[:number_cameras]
+        for k,cam in enumerate(self.cameras) :
+            cam.id = (3-len(str(k)))*"0"+str(k)
 
-    def single_camera(self,location,rotation,lens,is_looking_at=False,looking_at=None):
+
+    def single_camera(self,location,rotation,lens,is_looking_at=False,looking_at=None,type=None):
         self.clean_cameras()
-        c = Camera(id=0,location=location,rotation=rotation,lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
+        self.type = type
+        c = Camera(id="000",location=np.array(location),rotation=rotation,lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
         self.cameras.append(c)
 
     def multi_cameras(self,locations,rotations,lens,is_looking_at=False,looking_at=None):
         self.clean_cameras()
         for k in range(len(locations)):
-            c = Camera(id=k,location=locations[k],rotation=rotations[k],lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
+            c = Camera(id=(3-len(str(k)))*"0"+str(k),location=locations[k],rotation=rotations[k],lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
             self.cameras.append(c)
 
 class Light():
 
-    def __init__(self,id,type,direction,color,strength):
+    def __init__(self,id,type,direction,color,strength,position=[]):
 
         self.id = id
         self.type = type
         self.direction = direction
         self.color = color
         self.strength = strength
+        self.position = position
 
 class LightManager():
 
@@ -108,14 +118,14 @@ class LightManager():
 
     def fixed_ambiant(self,color,strength):
         self.clean_lights()
-        l = Light(id="0",type="world",direction=None,color=color,strength=strength)
+        l = Light(id="000",type="world",direction=None,color=color,strength=strength)
         self.lights.append(l)
         self.fixed_light = True
 
     def fixed_directionnals(self,directions,colors,strengths):
         self.clean_lights()
         for k in range(len(directions)):
-            l = Light(id=str(k),type="sun", direction=directions[k], color=colors[k], strength=strengths[k])
+            l = Light(id=(3-len(str(k)))*"0"+str(k),type="sun", direction=directions[k], color=colors[k], strength=strengths[k])
             self.lights.append(l)
         self.fixed_light = True
 
@@ -123,15 +133,40 @@ class LightManager():
         self.clean_lights()
         for k,cam in enumerate(cameras) :
             cam_lights = []
-            points = generate_points_on_sphere(radius=1,number_points=2*number_lights)
+            points = generate_points_on_sphere(radius=1,number_points=4*number_lights)
             camera_direction = cam.get_looking_direction()
             cos_angle = np.sum(-points * camera_direction.T,axis=1)
             min_cos = np.cos(max_angle*np.pi/180)
             ind = np.where(cos_angle >= min_cos)[0]
             directions = -points[ind,:]
             for i,direction in enumerate(directions) :
-                l = Light(id=str(k)+"_"+str(i),type="sun", direction=direction, color=colors[k], strength=strengths[k])
+                l = Light(id=cam.id+"_"+(3-len(str(i)))*"0"+str(i),type="sun", direction=direction, color=colors[k], strength=strengths[k])
                 cam_lights.append(l)
+            random.shuffle(cam_lights)
+            cam_lights = cam_lights[:number_lights]
+            for i, light in enumerate(cam_lights):
+                light.id = cam.id+"_"+(3-len(str(i)))*"0"+str(i)
+            self.lights.append(cam_lights)
+        self.fixed_light = False
+
+    def semi_sphere_point_per_camera(self,radius,cameras,number_lights,colors,strengths,max_angle=80):
+        self.clean_lights()
+        for k,cam in enumerate(cameras) :
+            cam_lights = []
+            points = generate_points_on_sphere(radius=radius,number_points=4*number_lights)
+            camera_direction = cam.get_looking_direction()
+            cos_angle = np.sum(-points * camera_direction.T,axis=1)
+            min_cos = np.cos(max_angle*np.pi/180)
+            ind = np.where(cos_angle >= min_cos)[0]
+            directions = -points[ind,:]
+            positions = points[ind,:]
+            for i,direction in enumerate(directions) :
+                l = Light(id=cam.id+"_"+(3-len(str(i)))*"0"+str(i),type="point", direction=direction, color=colors[k], strength=strengths[k], position=positions)
+                cam_lights.append(l)
+            random.shuffle(cam_lights)
+            cam_lights = cam_lights[:number_lights]
+            for i, light in enumerate(cam_lights):
+                light.id = cam.id+"_"+(3-len(str(i)))*"0"+str(i)
             self.lights.append(cam_lights)
         self.fixed_light = False
 
