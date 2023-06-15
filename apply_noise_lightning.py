@@ -40,11 +40,11 @@ for e in data.files :
     l = data[e]
     l2 = np.zeros(l.shape)
     for k,u in enumerate(l) :
-        u_rot = generate_local_rotation(u,3,7)
+        u_rot = generate_local_rotation(u,5,15)
         l2[k] = u_rot
 
     angles_ = np.arccos((l * l2).sum(axis=1))*180/np.pi
     data2.update({e:l2})
 
-np.savez(folder+"lights_noise.npz",**data2)
+np.savez(folder+"lights_noise_5_15.npz",**data2)
 a=0
