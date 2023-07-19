@@ -423,7 +423,7 @@ class ModalTimerOperator(bpy.types.Operator):
                         cam_light_directions.append(light.direction)
                         cam_light_position.append(light.position)
                     data.update({"cam_{}".format(k):cam_light_directions})
-                    data.update({"cam_pos{}".format(k):cam_light_position})
+                    data.update({"cam_pos_{}".format(k):cam_light_position})
 
             np.savez(self.scene_parameters.output_path+"/lights.npz",**data)
 
@@ -509,7 +509,39 @@ class ModalTimerOperator(bpy.types.Operator):
 
         return cryptomatte_node,viewer_node
 
-    def compositing_real(self,add_mask=True):
+    def compositing_normals():
+        # switch on nodes and get reference
+        bpy.context.scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
+
+        # clear default nodes
+        for node in tree.nodes:
+            tree.nodes.remove(node)
+
+        # create input image node
+        image_node = tree.nodes.new(type='CompositorNodeRLayers')
+        image_node.location = 0, 0
+
+        # create output node
+        comp_node = tree.nodes.new('CompositorNodeComposite')
+        comp_node.location = 400, 0
+
+        curve_rgb_node = tree.nodes.new(type="CompositorNodeCurveRGB")
+        red = curve_rgb_node.mapping.curves[0]
+        loc = red.points[0].location
+        loc[1] = 0.5
+        green = curve_rgb_node.mapping.curves[1]
+        loc = green.points[0].location
+        loc[1] = 0.5
+        blue = curve_rgb_node.mapping.curves[2]
+        loc = blue.points[0].location
+        loc[1] = 0.5
+        # link nodes
+        links = tree.links
+        link = links.new(image_node.outputs["Normal"], curve_rgb_node.inputs["Image"])
+        link = links.new(curve_rgb_node.outputs["Image"], comp_node.inputs["Image"])
+
+    def compositing_real(self,add_mask=True,add_normal=True):
         # switch on nodes and get reference
         bpy.context.scene.use_nodes = True
         tree = bpy.context.scene.node_tree
@@ -527,16 +559,36 @@ class ModalTimerOperator(bpy.types.Operator):
         comp_node.location = 400, 0
 
         output_node = tree.nodes.new('CompositorNodeOutputFile')
+        output_node.name = "mask"
         output_node.location = 400, 400
         output_node.format.file_format = "JPEG"
+
+        normal_output_node = tree.nodes.new('CompositorNodeOutputFile')
+        normal_output_node.name = "normal"
+        normal_output_node.location = 800, 400
+        normal_output_node.format.file_format = "JPEG"
+
+        curve_rgb_node = tree.nodes.new(type="CompositorNodeCurveRGB")
+        red = curve_rgb_node.mapping.curves[0]
+        loc = red.points[0].location
+        loc[1] = 0.5
+        green = curve_rgb_node.mapping.curves[1]
+        loc = green.points[0].location
+        loc[1] = 0.5
+        blue = curve_rgb_node.mapping.curves[2]
+        loc = blue.points[0].location
+        loc[1] = 0.5
 
         # link nodes
         links = tree.links
         link = links.new(image_node.outputs["Image"], comp_node.inputs[0])
         if add_mask :
             link = links.new(image_node.outputs["IndexOB"], output_node.inputs[0])
+        if add_normal :
+            link = links.new(image_node.outputs["Normal"], curve_rgb_node.inputs["Image"])
+            link = links.new(curve_rgb_node.outputs["Image"], normal_output_node.inputs[0])
 
-        return output_node
+        return output_node,normal_output_node
 
     def setup_real(self):
         bpy.context.scene.cycles.samples = 256
@@ -565,6 +617,8 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_object = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_asset = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_material = True
+        bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_material = True
+        bpy.context.scene.view_layers["ViewLayer"].use_pass_normal = True
         if self.scene_parameters.stereo_photometry :
             bpy.context.scene.cycles.max_bounces = 200
             bpy.context.scene.cycles.glossy_bounces = 0
@@ -594,7 +648,7 @@ class ModalTimerOperator(bpy.types.Operator):
         _all_lights = self._scene_data["all_lights"]
 
         if self.scene_parameters.lights.fixed_light :
-            output_node = self.compositing_real()
+            output_node,normal_output_node = self.compositing_real(add_normal=False)
             output_node.base_path = self.scene_parameters.output_path+"medium_masks/"
             _refractive_medium.pass_index = 1
 
@@ -610,7 +664,7 @@ class ModalTimerOperator(bpy.types.Operator):
         else :
             _refractive_medium.pass_index = 1
             for cam_num, cam_k in enumerate(_all_cameras):
-                output_node = self.compositing_real()
+                output_node,normal_output_node = self.compositing_real(add_normal=False)
                 output_node.base_path = self.scene_parameters.output_path + "medium_masks/"
                 print('\033[93m' + "OBJECT WITH AMBER [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
@@ -622,7 +676,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_with/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
                     if light_num == 0 :
-                        output_node = self.compositing_real(False)
+                        output_node = self.compositing_real(add_mask=False,add_normal=False)
                     light.hide_render = True
             _refractive_medium.pass_index = 0
 
@@ -640,13 +694,17 @@ class ModalTimerOperator(bpy.types.Operator):
 
         if self.scene_parameters.lights.fixed_light :
             _object.pass_index = 1
-            output_node = self.compositing_real()
+            output_node,normal_output_node = self.compositing_real()
             output_node.base_path = self.scene_parameters.output_path + "images_masks_without/"
+            normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
+
             for cam_num,cam_k in enumerate(_all_cameras):
                 print('\033[93m' + "OBJECT WITHOUT AMBER [{}/{}]\n".format(cam_num+1,len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
                 output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                 output_node.format.file_format = "PNG"
+                normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
+                normal_output_node.format.file_format = "PNG"
                 bpy.context.scene.render.filepath = self.scene_parameters.output_path+"images_without/" + f'{cam_k.name}.png'
                 bpy.ops.render.render(write_still=1)
             _refractive_medium.hide_render = False
@@ -655,8 +713,11 @@ class ModalTimerOperator(bpy.types.Operator):
         else :
             _object.pass_index = 1
             for cam_num, cam_k in enumerate(_all_cameras):
-                output_node = self.compositing_real()
+                output_node,normal_output_node = self.compositing_real()
                 output_node.base_path = self.scene_parameters.output_path + "images_masks_without/"
+                normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
+                print(output_node)
+                print(normal_output_node)
                 print('\033[93m' + "OBJECT WITHOUT AMBER [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
                 for light_num in range(len(_all_lights[cam_num])):
@@ -664,10 +725,12 @@ class ModalTimerOperator(bpy.types.Operator):
                     light.hide_render = False
                     output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                     output_node.format.file_format = "PNG"
+                    normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
+                    normal_output_node.format.file_format = "PNG"
                     bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_without/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
-                    if light_num == 0 :
-                        output_node = self.compositing_real(False)
+                    if light_num != 0 :
+                        output_node,normal_output_node = self.compositing_real(add_mask=False,add_normal=False)
                     light.hide_render = True
             _refractive_medium.hide_render = False
             _object.pass_index = 0
@@ -685,6 +748,8 @@ class ModalTimerOperator(bpy.types.Operator):
             os.mkdir(self.scene_parameters.output_path+"images_masks_with/")
         if not os.path.exists(self.scene_parameters.output_path+"medium_masks/"):
             os.mkdir(self.scene_parameters.output_path+"medium_masks/")
+        if not os.path.exists(self.scene_parameters.output_path+"normal/"):
+            os.mkdir(self.scene_parameters.output_path+"normal/")
 
     def modal(self, context, event):
 

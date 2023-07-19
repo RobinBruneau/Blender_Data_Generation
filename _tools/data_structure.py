@@ -89,10 +89,11 @@ class CameraManager():
         c = Camera(id="000",location=np.array(location),rotation=rotation,lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
         self.cameras.append(c)
 
-    def multi_cameras(self,locations,rotations,lens,is_looking_at=False,looking_at=None):
+    def multi_cameras(self,locations,rotations,lens,is_looking_at=False,looking_at=None,type="perspective"):
         self.clean_cameras()
+        self.type=type
         for k in range(len(locations)):
-            c = Camera(id=(3-len(str(k)))*"0"+str(k),location=locations[k],rotation=rotations[k],lens=lens,is_looking_at=is_looking_at,looking_at=looking_at)
+            c = Camera(id=(3-len(str(k)))*"0"+str(k),location=locations[k],rotation=rotations[k],lens=lens,is_looking_at=is_looking_at,looking_at=looking_at[k])
             self.cameras.append(c)
 
 class Light():

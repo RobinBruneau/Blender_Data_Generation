@@ -8,7 +8,7 @@ def generate_blender_scene():
     object_path = "D:/INPUT/Graphosoma/Graphosoma.obj"
     object_texture_path = "D:/INPUT/Graphosoma/Graphosoma.png"
     medium_path = ""
-    output_path = "D:/PhD/Projects/Blender_Data_Generation/OUTPUT/MVPS_graphosoma_point/"
+    output_path = "D:/PhD/Projects/Blender_Data_Generation/OUTPUT/Data_xyz_normal/"
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -18,9 +18,10 @@ def generate_blender_scene():
     cm = CameraManager()
     # ortho = 1.7
     # perspec = 50
-    cm.sphere_cameras(radius=3,number_cameras=20,lens=50,type="perspective")
+    cm.sphere_cameras(radius=3,number_cameras=50,lens=50,type="perspective")
     #cm.single_camera(location=[-10,0,0],rotation=[0,0,0],lens=1.7,is_looking_at=True,looking_at=[0.0,0.0,0.0],type="orthographic")
-    #cm.cameras = [cm.cameras[11]]
+    cm.multi_cameras(locations=[[3,0,0],[0,3,0],[0,0,3]],rotations=[[0,0,0],[0,0,0],[0,0,0]],lens=50,is_looking_at=True,looking_at=[[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]],type="perspective")
+    cm.cameras = [cm.cameras[0]]
 
     # GENERATE LIGHTS
     #    - fixed_ambiant (an ambiant light for all cameras)
@@ -28,7 +29,7 @@ def generate_blender_scene():
     #    - semi_sphere_directionnal_per_camera (a set of directional lights for each camera)
     lm = LightManager()
     #lm.fixed_ambiant(color=(1.0,1.0,1.0,1.0),strength=1)
-    lm.semi_sphere_point_per_camera(radius=3,cameras=cm.cameras,number_lights=10,colors=[(1.0,1.0,1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))],max_angle=67.5)
+    lm.semi_sphere_point_per_camera(radius=3,cameras=cm.cameras,number_lights=1,colors=[(1.0,1.0,1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))],max_angle=67.5)
     a=0
     #lm.fixed_directionnals(directions=[np.array([1.0,0.0,0.0]).reshape(3,1),np.array([0.0,1.0,0.0]).reshape(3,1),np.array([0.0,0.0,1.0]).reshape(3,1)],colors = [(1.0,1.0,1.0) for i in range(3)],strengths = [np.pi,np.pi,np.pi])
 
