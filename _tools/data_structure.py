@@ -171,6 +171,28 @@ class LightManager():
             self.lights.append(cam_lights)
         self.fixed_light = False
 
+
+    def semi_sphere_area_per_camera(self,radius,cameras,number_lights,colors,strengths,max_angle=80):
+        self.clean_lights()
+        for k,cam in enumerate(cameras) :
+            cam_lights = []
+            points = generate_points_on_sphere(radius=radius,number_points=4*number_lights)
+            camera_direction = cam.get_looking_direction()
+            cos_angle = np.sum(-points * camera_direction.T,axis=1)
+            min_cos = np.cos(max_angle*np.pi/180)
+            ind = np.where(cos_angle >= min_cos)[0]
+            directions = -points[ind,:]
+            positions = points[ind,:]
+            for i,direction in enumerate(directions) :
+                l = Light(id=cam.id+"_"+(3-len(str(i)))*"0"+str(i),type="area", direction=direction, color=colors[k], strength=strengths[k], position=positions[i])
+                cam_lights.append(l)
+            random.shuffle(cam_lights)
+            cam_lights = cam_lights[:number_lights]
+            for i, light in enumerate(cam_lights):
+                light.id = cam.id+"_"+(3-len(str(i)))*"0"+str(i)
+            self.lights.append(cam_lights)
+        self.fixed_light = False
+
 class Object():
 
     def __init__(self):

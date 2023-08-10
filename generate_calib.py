@@ -7,14 +7,14 @@ import glob
 from pathlib import Path
 import cv2
 
-folder = 'D:\PhD\Dropbox\Data\Data\DiLiGenT-MV\DiLiGenT-MV\MVPS//bearPNG/'
+folder = '/home/robin/Desktop/PhD/Projects/RPS_fonctionne/Data_salle/Data_ortho_normal_full/'
 data = np.load(folder+"lights.npz")
 R  = np.load(folder+"R.npy")
 T = np.load(folder+"T.npy")
-folder2 = "D:\PhD\Projects\Playing_with_NeuS\data\MVPS_graphosoma_normal_ps/"
-R2  = np.load(folder2+"R.npy")
-T2 = np.load(folder2+"T.npy")
-'''
+#folder2 = "D:\PhD\Projects\Playing_with_NeuS\data\MVPS_graphosoma_normal_ps/"
+#R2  = np.load(folder2+"R.npy")
+#T2 = np.load(folder2+"T.npy")
+
 files = data.files
 for e in files :
     if "pos" in e :
@@ -29,7 +29,7 @@ for k,e in enumerate(data.files) :
     dlc.append(dc)
 data_m.update({"calib":dlc})
 scipy.io.savemat(folder+"calib.mat",data_m)
-'''
+
 import os
 #os.mkdir(folder+"normals/")
 '''
@@ -39,7 +39,7 @@ for ip in imp :
     im_l= cv2.medianBlur(im,3)
     cv2.imwrite(ip,im_l)
 '''
-
+'''
 for k,e in enumerate(glob.glob("D:\PhD\Dropbox\Data\Data\DiLiGenT-MV\DiLiGenT-MV\MVPS//bearPNG//normal_ps/*.png")):
 
     name = e.split("\\")[-1].split(".")[0]
@@ -54,7 +54,7 @@ for k,e in enumerate(glob.glob("D:\PhD\Dropbox\Data\Data\DiLiGenT-MV\DiLiGenT-MV
     data_world[ind_0] = 0
     plt.imsave(e,data_world)
 
-
+'''
 
 '''
 for k in range(20):

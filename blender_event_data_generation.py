@@ -1,3 +1,5 @@
+import glob
+
 import bpy
 import numpy as np
 import os
@@ -29,6 +31,7 @@ class ModalTimerOperator(bpy.types.Operator):
         self.first_F5 = True
         self.first_F6 = True
         self.first_F7 = True
+        self.not_finished = True
         self.not_f7 = True
         self.not_f8 = True
 
@@ -47,6 +50,44 @@ class ModalTimerOperator(bpy.types.Operator):
         if self.scene_parameters.render_with_obj_mask :
             self.l_render.append("masks")
             self.output_render.append(self.scene_parameters.output_path+"images_masks_with/")
+
+    def generate_plans(self):
+
+        material_black = bpy.data.materials.new(name="black")
+        material_black.use_nodes = True
+        bsdf = material_black.node_tree.nodes.get('Principled BSDF')
+        bsdf.inputs[0].default_value = (0, 0, 0, 1)
+
+        bpy.ops.mesh.primitive_plane_add(location=(0.701, 0, 0), size = 1.4,rotation=(0,np.pi/2,0))
+        p1 = bpy.context.active_object
+        p1.hide_render=True
+        p1.active_material = material_black
+        bpy.ops.mesh.primitive_plane_add(location=(-0.701, 0, 0), size = 1.4, rotation=(0, np.pi / 2, 0))
+        p2 = bpy.context.active_object
+        p2.hide_render = True
+        p2.active_material = material_black
+        bpy.ops.mesh.primitive_plane_add(location=(0, 0, 0.701), size = 1.4)
+        p3 = bpy.context.active_object
+        p3.hide_render = True
+        p3.active_material = material_black
+        bpy.ops.mesh.primitive_plane_add(location=(0, 0, -0.701), size = 1.4)
+        p4 = bpy.context.active_object
+        p4.hide_render = True
+        p4.active_material = material_black
+        bpy.ops.mesh.primitive_plane_add(location=(0,0.701, 0), size = 1.4, rotation=(np.pi / 2, 0, 0))
+        p5 = bpy.context.active_object
+        p5.hide_render = True
+        p5.active_material = material_black
+        bpy.ops.mesh.primitive_plane_add(location=(0,-0.701, 0), size = 1.4, rotation=(np.pi / 2, 0, 0))
+        p6 = bpy.context.active_object
+        p6.hide_render = True
+        p6.active_material = material_black
+
+        return [p1,p2,p3,p4,p5,p6]
+
+
+
+
 
     def clean_scene(self):
         # Clean the scene
@@ -67,6 +108,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
         _object = self.generate_object()
         refractive_medium = self.generate_refractive_medium()
+        #plans = self.generate_plans()
         all_cams = self.generate_cameras()
         all_lights = self.generate_lights()
         all_materials = self.generate_materials()
@@ -108,7 +150,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     self.global_light_intensity = light_param.strength
                     bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = light_param.color
                     bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = light_param.strength
-                else :
+                elif light_param.type=="sun":
                     bpy.ops.object.light_add(type='SUN', align='WORLD', location=-light_param.direction, scale=(1, 1, 1))
                     light = bpy.context.selected_objects[0]
                     light.name = light_param.id
@@ -120,24 +162,56 @@ class ModalTimerOperator(bpy.types.Operator):
                     bpy.context.scene.collection.objects.unlink(light)
                     bpy.data.collections["Lights"].objects.link(light)
                     all_lights.append(light)
+                else :
+                    bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_param.position, scale=(1,1,1))
+                    light = bpy.context.selected_objects[0]
+                    light.name = light_param.id
+                    light.data.energy = light_param.strength
+                    light.data.color = light_param.color
+                    light.data.size = 10
+                    light.visible_glossy = False
+                    light.data.spread = 0
+                    constraint = light.constraints.new(type='TRACK_TO')
+                    constraint.target = self.empty_centered_point
+                    bpy.context.scene.collection.objects.unlink(light)
+                    bpy.data.collections["Lights"].objects.link(light)
+                    all_lights.append(light)
 
         else :
             for k, light_group in enumerate(lights_parameters.lights):
                 group = []
                 for light_param in light_group :
-                    bpy.ops.object.light_add(type='SUN', align='WORLD', location=-light_param.direction,
-                                             scale=(1, 1, 1))
-                    light = bpy.context.selected_objects[0]
-                    light.name = light_param.id
-                    light.data.energy = light_param.strength
-                    light.data.color = light_param.color
-                    light.hide_render = True
-                    light.visible_glossy = False
-                    constraint = light.constraints.new(type='TRACK_TO')
-                    constraint.target = self.empty_centered_point
-                    bpy.context.scene.collection.objects.unlink(light)
-                    bpy.data.collections["Lights"].objects.link(light)
-                    group.append(light)
+
+                    if light_param.type == "sun" :
+                        bpy.ops.object.light_add(type='SUN', align='WORLD', location=-light_param.direction,
+                                                 scale=(1, 1, 1))
+                        light = bpy.context.selected_objects[0]
+                        light.name = light_param.id
+                        light.data.energy = light_param.strength
+                        light.data.color = light_param.color
+                        light.hide_render = True
+                        light.visible_glossy = False
+                        constraint = light.constraints.new(type='TRACK_TO')
+                        constraint.target = self.empty_centered_point
+                        bpy.context.scene.collection.objects.unlink(light)
+                        bpy.data.collections["Lights"].objects.link(light)
+                        group.append(light)
+                    else:
+                        bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_param.position,
+                                                 scale=(10, 10, 10))
+                        light = bpy.context.selected_objects[0]
+                        light.name = light_param.id
+                        light.data.energy = light_param.strength
+                        light.data.color = light_param.color
+                        light.hide_render = True
+                        light.visible_glossy = False
+                        light.data.spread = 0
+                        light.data.size = 10
+                        constraint = light.constraints.new(type='TRACK_TO')
+                        constraint.target = self.empty_centered_point
+                        bpy.context.scene.collection.objects.unlink(light)
+                        bpy.data.collections["Lights"].objects.link(light)
+                        group.append(light)
                 all_lights.append(group)
 
         return all_lights
@@ -203,7 +277,7 @@ class ModalTimerOperator(bpy.types.Operator):
         NodeBSDF.inputs["Color"].default_value = self.scene_parameters.medium.color
         NodeBSDF.inputs["Roughness"].default_value = 0.0  # Make the glass fully transparent
         NodeBSDF.inputs["IOR"].default_value = self.scene_parameters.medium.ior  # IOR
-        NodeBSDF.distribution = "MULTI_GGX"
+        NodeBSDF.distribution = "GGX"
         material_refractive_medium.node_tree.links.new(material_output.inputs[0], NodeBSDF.outputs[0])
 
         all_materials = {"object": material_object_texture,
@@ -345,7 +419,12 @@ class ModalTimerOperator(bpy.types.Operator):
 
         camd = cam.data
         if camd.type != 'PERSP':
-            return np.eye(3)
+            scene = bpy.context.scene
+            scale = camd.ortho_scale
+            rx = scene.render.resolution_x
+            ry = scene.render.resolution_y
+            return np.array([[rx / scale, 0, rx / 2], [0, rx / scale, ry / 2], [0, 0, 1]])
+
         scene = bpy.context.scene
         f_in_mm = camd.lens
         scale = scene.render.resolution_percentage / 100
@@ -675,8 +754,9 @@ class ModalTimerOperator(bpy.types.Operator):
                     output_node.format.file_format = "PNG"
                     bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_with/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
+
                     if light_num == 0 :
-                        output_node = self.compositing_real(add_mask=False,add_normal=False)
+                        output_node,normal_output_node = self.compositing_real(add_mask=False,add_normal=False)
                     light.hide_render = True
             _refractive_medium.pass_index = 0
 
@@ -751,6 +831,13 @@ class ModalTimerOperator(bpy.types.Operator):
         if not os.path.exists(self.scene_parameters.output_path+"normal/"):
             os.mkdir(self.scene_parameters.output_path+"normal/")
 
+    def rename(self):
+        path_medium_mask = glob.glob(self.scene_parameters.output_path+"medium_masks/*")
+        for p in path_medium_mask :
+            name = p.split("medium_masks/")[-1].split("_cut_")[0]
+            os.rename(p,self.scene_parameters.output_path+"medium_masks/"+name+".png")
+
+
     def modal(self, context, event):
 
         if event.type in {'F1'}:
@@ -803,6 +890,10 @@ class ModalTimerOperator(bpy.types.Operator):
                         bpy.context.window.workspace = bpy.data.workspaces['Layout']
                         self.activate_film(False)
                         self.global_white_light(False)
+                        if self.not_finished :
+                            self.rename()
+                            self.not_finished = False
+                        #bpy.ops.wm.quit_blender()
 
                 else :
                     bpy.app.use_event_simulate = False
@@ -811,7 +902,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
         if event.type in {'F8'}:
             if (not self.first_F1) and self.not_f8 :
-                bpy.data.images["Viewer Node"].save_render(filepath=self.output_render[self.ind_render]+f"camera_{self.ind_cam_k-1}_.png")
+                bpy.data.images["Viewer Node"].save_render(filepath=self.output_render[self.ind_render]+f"{(3-len(str(self.ind_cam_k-1)))*'0'+str(self.ind_cam_k-1)}.png")
                 easy_keys.run(push_f7())
                 self.not_f7 = True
                 self.not_f8 = False

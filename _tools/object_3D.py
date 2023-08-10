@@ -93,9 +93,10 @@ class object_3D():
 
         f=open(output_file,'wb')
         data = {"vertices":tab_vertices,"faces":tab_faces,"centers":tab_centers,"normals":tab_normals}
+        data2 = {"vertices": tab_vertices.T, "faces": tab_faces.T, "centers": tab_centers.T, "normals": tab_normals.T}
         pickle.dump(data,f,protocol=pickle.HIGHEST_PROTOCOL)
         f.close()
-        np.savez(output_file[:-3] + "npz", **data)
+        np.savez(output_file[:-3] + "npz", **data2)
 
     def check_doublon(self):
 
