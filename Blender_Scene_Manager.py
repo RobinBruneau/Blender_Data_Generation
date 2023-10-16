@@ -71,6 +71,7 @@ def generate_blender_scene():
     scene = Scene(cm,lm,object,medium,output_path)
     scene.render_with_medium(state=False)
     scene.render_without_medium(state=True)
+    assert(scene.render_with ^ scene.render_without)
     scene.save_lights_params(state=True)
     scene.stereo_photometry_rendering(state=True)
 

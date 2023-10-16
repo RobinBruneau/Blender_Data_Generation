@@ -851,29 +851,29 @@ class ModalTimerOperator(bpy.types.Operator):
     def create_output_folders(self):
         if not os.path.exists(self.scene_parameters.output_path):
             os.mkdir(self.scene_parameters.output_path)
-        if not os.path.exists(self.scene_parameters.output_path+"images_without/"):
-            os.mkdir(self.scene_parameters.output_path+"images_without/")
-        if not os.path.exists(self.scene_parameters.output_path+"images_masks_without/"):
-            os.mkdir(self.scene_parameters.output_path+"images_masks_without/")
-        if not os.path.exists(self.scene_parameters.output_path+"images_with/"):
-            os.mkdir(self.scene_parameters.output_path+"images_with/")
-        if not os.path.exists(self.scene_parameters.output_path+"images_masks_with/"):
-            os.mkdir(self.scene_parameters.output_path+"images_masks_with/")
-        if not os.path.exists(self.scene_parameters.output_path+"medium_masks/"):
-            os.mkdir(self.scene_parameters.output_path+"medium_masks/")
+        if not os.path.exists(self.scene_parameters.output_path+"image/"):
+            os.mkdir(self.scene_parameters.output_path+"image/")
+        if not os.path.exists(self.scene_parameters.output_path+"mask/"):
+            os.mkdir(self.scene_parameters.output_path+"mask/")
+        if not os.path.exists(self.scene_parameters.output_path+"image/"):
+            os.mkdir(self.scene_parameters.output_path+"image/")
+        if not os.path.exists(self.scene_parameters.output_path+"mask/"):
+            os.mkdir(self.scene_parameters.output_path+"mask/")
+        if not os.path.exists(self.scene_parameters.output_path+"mask_medium/"):
+            os.mkdir(self.scene_parameters.output_path+"mask_medium/")
         if not os.path.exists(self.scene_parameters.output_path+"normal/"):
             os.mkdir(self.scene_parameters.output_path+"normal/")
 
     def rename(self):
-        path_medium_mask = glob.glob(self.scene_parameters.output_path+"medium_masks/*")
+        path_medium_mask = glob.glob(self.scene_parameters.output_path+"mask_medium/*")
         for p in path_medium_mask :
             name = p.split("medium_masks/")[-1].split("_cut_")[0]
-            os.rename(p,self.scene_parameters.output_path+"medium_masks/"+name+".png")
+            os.rename(p,self.scene_parameters.output_path+"mask_medium/"+name+".png")
 
-        path_image_mask = glob.glob(self.scene_parameters.output_path + "images_masks_without/*")
+        path_image_mask = glob.glob(self.scene_parameters.output_path + "mask/*")
         for p in path_image_mask:
-            name = p.split("images_masks_without/")[-1].split("_cut_")[0]
-            os.rename(p, self.scene_parameters.output_path + "images_masks_without/" + name + ".png")
+            name = p.split("mask/")[-1].split("_cut_")[0]
+            os.rename(p, self.scene_parameters.output_path + "mask/" + name + ".png")
 
 
     def modal(self, context, event):
