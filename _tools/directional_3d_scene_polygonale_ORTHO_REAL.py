@@ -2,6 +2,7 @@ import copy
 from tqdm import tqdm
 import numpy as np
 from shapely.geometry import Polygon as SPolygon
+import shapely
 from matplotlib import pyplot as plt
 import bisect
 
@@ -495,6 +496,11 @@ class Polygon_prism_field():
         is_inside = np.abs(np.sum(angles,axis=1) - 2 * np.pi) < 1e-5
         return is_inside,self.direction
 
+    def intersecting_points_poly(self,x):
+        A = np.eye(3) - (-self.direction @ self.n.T) / (-self.direction.T @ self.n)
+        B = (self.beta * -self.direction) / (-self.direction.T @ self.n)
+        projected_x = A @ x - B
+        return projected_x
 
 def generate_mesh(vertices,faces) :
 

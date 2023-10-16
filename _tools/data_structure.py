@@ -37,7 +37,7 @@ def euler_to_matrix(rotation):
 
 class Camera():
 
-    def __init__(self,id,location,rotation,lens,is_looking_at,looking_at):
+    def __init__(self,id,location,rotation,lens,is_looking_at,looking_at,size=(1920,1080)):
 
         self.id = id
         self.location = location
@@ -45,6 +45,7 @@ class Camera():
         self.lens = lens
         self.is_looking_at = is_looking_at
         self.looking_at = looking_at
+        self.size = size
 
     def get_looking_direction(self):
         if self.is_looking_at :
@@ -57,25 +58,36 @@ class CameraManager():
 
     def __init__(self):
         self.cameras = []
+        self.size = (1920,1080)
 
     def clean_cameras(self):
         self.cameras = []
+
+
+    def from_camera_RT(self,centers,lens):
+        self.clean_cameras()
+        self.type = "perspective"
+        for k in range(len(centers)):
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=np.array([0.0, 0.0, 0.0]))
+            self.cameras.append(c)
 
     def ring_cameras(self,height,radius,number_cameras,lens):
         self.clean_cameras()
         angles = np.linspace(0,2*np.pi,number_cameras+1)[:-1]
         for k in range(len(angles)):
             location = np.array([radius*np.cos(angles[k]),radius*np.sin(angles[k]),height])
-            c = Camera(id="000", location=location, rotation=None, lens=lens, is_looking_at=True, looking_at=np.array([0.0,0.0,0.0]))
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=location, rotation=None, lens=lens, is_looking_at=True, looking_at=np.array([0.0,0.0,0.0]))
             self.cameras.append(c)
 
-    def sphere_cameras(self,radius,number_cameras,lens,type):
+
+    def sphere_cameras(self,radius,number_cameras,lens,type,size=(1920,1080)):
         self.clean_cameras()
         self.type = type
+        self.size=size
         locations = generate_points_on_sphere(radius,int(1.5*number_cameras))
         for k,location in enumerate(locations) :
             c = Camera(id=(3-len(str(k)))*"0"+str(k), location=np.array(location), rotation=None, lens=lens, is_looking_at=True,
-                       looking_at=np.array([0.0, 0.0, 0.0]))
+                       looking_at=np.array([0.0, 0.0, 0.0]),)
             self.cameras.append(c)
         random.shuffle(self.cameras)
         self.cameras = self.cameras[:number_cameras]
@@ -112,11 +124,26 @@ class LightManager():
     def __init__(self):
         self.fixed_light = None
         self.lights = []
+        self.ambiant_intensity = 0.0
+        self.specific = True
 
     def clean_lights(self):
         self.fixed_light = None
         self.lights = []
 
+
+    def from_ligth_npz(self,cameras,lights,colors,strengths):
+        self.clean_lights()
+        for k, cam in enumerate(cameras):
+            cam_lights = []
+            for i in range(lights[0].shape[0]):
+                direction = - (lights[k][i,:]).reshape(3)
+                l = Light(id=cam.id + "_" + (3 - len(str(i))) * "0" + str(i), type="sun", direction=direction,
+                          color=colors[k], strength=strengths[k])
+                print(l.id,l.direction)
+                cam_lights.append(l)
+            self.lights.append(cam_lights)
+        self.fixed_light = False
     def fixed_ambiant(self,color,strength):
         self.clean_lights()
         l = Light(id="000",type="world",direction=None,color=color,strength=strength)
@@ -193,6 +220,10 @@ class LightManager():
             self.lights.append(cam_lights)
         self.fixed_light = False
 
+    def add_ambiant(self,intensity):
+        self.ambiant_intensity = intensity
+        self.specific = False
+
 class Object():
 
     def __init__(self):
@@ -207,6 +238,7 @@ class Object():
         self.scale = None
         self.color = None
         self.ior = None
+        self.material = ""
 
     def from_path(self,path,texture_path="",location=[],rotation=[],scale=[]):
         self.type = "path"
@@ -238,6 +270,9 @@ class Object():
     def add_refraction(self,color,ior):
         self.color = color
         self.ior = ior
+
+    def specific_material(self,name):
+        self.material = name
 
 class Scene():
 

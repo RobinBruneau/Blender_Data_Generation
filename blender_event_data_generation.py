@@ -139,9 +139,11 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.data.collections["Look_at"].objects.link(self.empty_centered_point)
 
         # Disable world light
-        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = 0.0
+        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
+        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = self.scene_parameters.lights.ambiant_intensity
         all_lights = []
         lights_parameters = self.scene_parameters.lights
+
         if lights_parameters.fixed_light :
             for k,light_param in enumerate(lights_parameters.lights):
                 if light_param.type=="world" :
@@ -180,7 +182,7 @@ class ModalTimerOperator(bpy.types.Operator):
         else :
             for k, light_group in enumerate(lights_parameters.lights):
                 group = []
-                for light_param in light_group :
+                for ii,light_param in enumerate(light_group) :
 
                     if light_param.type == "sun" :
                         bpy.ops.object.light_add(type='SUN', align='WORLD', location=-light_param.direction,
@@ -273,15 +275,34 @@ class ModalTimerOperator(bpy.types.Operator):
         material_refractive_medium.node_tree.nodes.remove(
             material_refractive_medium.node_tree.nodes.get('Principled BSDF'))
         material_output = material_refractive_medium.node_tree.nodes.get('Material Output')
-        NodeBSDF = material_refractive_medium.node_tree.nodes.new('ShaderNodeBsdfGlass')
+        #NodeBSDF = material_refractive_medium.node_tree.nodes.new('ShaderNodeBsdfGlass')
+        NodeBSDF = material_refractive_medium.node_tree.nodes.new('ShaderNodeBsdfRefraction')
         NodeBSDF.inputs["Color"].default_value = self.scene_parameters.medium.color
         NodeBSDF.inputs["Roughness"].default_value = 0.0  # Make the glass fully transparent
         NodeBSDF.inputs["IOR"].default_value = self.scene_parameters.medium.ior  # IOR
         NodeBSDF.distribution = "GGX"
         material_refractive_medium.node_tree.links.new(material_output.inputs[0], NodeBSDF.outputs[0])
 
+        prefs = bpy.context.preferences
+        filepaths = prefs.filepaths
+        asset_libraries = filepaths.asset_libraries
+
+        for asset_library in asset_libraries:
+            library_name = asset_library.name
+            library_path = Path(asset_library.path)
+            blend_files = [fp for fp in library_path.glob("**/*.blend") if fp.is_file()]
+            print(f"Checking the content of library '{library_name}' :")
+            for blend_file in blend_files:
+                with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
+                    data_to.materials = data_from.materials
+
         all_materials = {"object": material_object_texture,
                          "refractive_medium": material_refractive_medium}
+
+        for m in bpy.data.materials:
+            all_materials.update({m.name:m})
+
+
 
         return all_materials
 
@@ -499,7 +520,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     cam_light_directions = []
                     cam_light_position = []
                     for light in light_cam :
-                        cam_light_directions.append(light.direction)
+                        cam_light_directions.append(-light.direction)
                         cam_light_position.append(light.position)
                     data.update({"cam_{}".format(k):cam_light_directions})
                     data.update({"cam_pos_{}".format(k):cam_light_position})
@@ -678,12 +699,14 @@ class ModalTimerOperator(bpy.types.Operator):
         _refractive_medium.active_material = _all_materials["refractive_medium"]
         _all_cameras = self._scene_data["all_cams"]
 
-    def apply_rendering_params(self):
+    def apply_rendering_params(self,):
 
+        bpy.context.scene.render.resolution_x = int(self.scene_parameters.cameras.size[0])
+        bpy.context.scene.render.resolution_y = int(self.scene_parameters.cameras.size[1])
         bpy.context.scene.render.image_settings.file_format = 'PNG'
         bpy.context.scene.cycles.device = 'GPU'
         bpy.context.scene.render.image_settings.color_depth = '16'
-        bpy.context.scene.render.image_settings.compression = 15
+        bpy.context.scene.render.image_settings.compression = 0
         bpy.context.scene.view_settings.view_transform = 'Standard'
         bpy.context.scene.render.engine = 'CYCLES'
         bpy.context.scene.cycles.use_preview_denoising = True
@@ -721,7 +744,10 @@ class ModalTimerOperator(bpy.types.Operator):
         _object = self._scene_data["object"]
         _refractive_medium = self._scene_data["refractive_medium"]
         _all_materials = self._scene_data["all_materials"]
-        _object.active_material = _all_materials["object"]
+        if self.scene_parameters.object.material == "" :
+            _object.active_material = _all_materials["object"]
+        else :
+            _object.active_material = _all_materials[self.scene_parameters.object.material]
         _refractive_medium.active_material = _all_materials["refractive_medium"]
         _all_cameras = self._scene_data["all_cams"]
         _all_lights = self._scene_data["all_lights"]
@@ -767,7 +793,10 @@ class ModalTimerOperator(bpy.types.Operator):
         _refractive_medium = self._scene_data["refractive_medium"]
         _refractive_medium.hide_render = True
         _all_materials = self._scene_data["all_materials"]
-        _object.active_material = _all_materials["object"]
+        if self.scene_parameters.object.material == "":
+            _object.active_material = _all_materials["object"]
+        else:
+            _object.active_material = _all_materials[self.scene_parameters.object.material]
         _refractive_medium.active_material = _all_materials["refractive_medium"]
         _all_cameras = self._scene_data["all_cams"]
         _all_lights = self._scene_data["all_lights"]
@@ -785,6 +814,8 @@ class ModalTimerOperator(bpy.types.Operator):
                 output_node.format.file_format = "PNG"
                 normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                 normal_output_node.format.file_format = "PNG"
+                normal_output_node.format.color_depth = "16"
+                normal_output_node.format.compression = 0
                 bpy.context.scene.render.filepath = self.scene_parameters.output_path+"images_without/" + f'{cam_k.name}.png'
                 bpy.ops.render.render(write_still=1)
             _refractive_medium.hide_render = False
@@ -807,6 +838,8 @@ class ModalTimerOperator(bpy.types.Operator):
                     output_node.format.file_format = "PNG"
                     normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                     normal_output_node.format.file_format = "PNG"
+                    normal_output_node.format.color_depth = "16"
+                    normal_output_node.format.compression = 0
                     bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_without/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
                     if light_num != 0 :
@@ -836,6 +869,11 @@ class ModalTimerOperator(bpy.types.Operator):
         for p in path_medium_mask :
             name = p.split("medium_masks/")[-1].split("_cut_")[0]
             os.rename(p,self.scene_parameters.output_path+"medium_masks/"+name+".png")
+
+        path_image_mask = glob.glob(self.scene_parameters.output_path + "images_masks_without/*")
+        for p in path_image_mask:
+            name = p.split("images_masks_without/")[-1].split("_cut_")[0]
+            os.rename(p, self.scene_parameters.output_path + "images_masks_without/" + name + ".png")
 
 
     def modal(self, context, event):
@@ -899,6 +937,11 @@ class ModalTimerOperator(bpy.types.Operator):
                     bpy.app.use_event_simulate = False
                     bpy.context.window.workspace = bpy.data.workspaces['Layout']
                     self.activate_film(False)
+                    self.global_white_light(False)
+                    if self.not_finished:
+                        self.rename()
+                        self.not_finished = False
+                    # bpy.ops.wm.quit_blender()
 
         if event.type in {'F8'}:
             if (not self.first_F1) and self.not_f8 :
