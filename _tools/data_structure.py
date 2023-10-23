@@ -65,11 +65,11 @@ class CameraManager():
         self.cameras = []
 
 
-    def from_camera_RT(self,centers,lens):
+    def from_camera_RT(self,centers,look_at,lens):
         self.clean_cameras()
         self.type = "perspective"
         for k in range(len(centers)):
-            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=np.array([0.0, 0.0, 0.0]))
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=look_at[k].reshape(3))
             self.cameras.append(c)
 
     def ring_cameras(self,height,radius,number_cameras,lens):
@@ -295,20 +295,19 @@ class Scene():
         self.save_lights = False
         self.stereo_photometry = False
 
-    def render_with_medium(self,state=True):
-        self.render_with = state
-        self.render_with_obj_mask = state
-        self.render_with_medium_mask = state
+    def __init__(self,cameras,object,output_path):
 
-    def render_without_medium(self,state):
-        self.render_without = state
-        self.render_without_obj_mask = state
+        assert(object.type=="path" or object.type=="sphere")
 
-    def save_lights_params(self,state):
-        self.save_lights = state
+        self.cameras = cameras
+        self.object = object
+        self.output_path = output_path
+        self.rendering_normal_maps = False
+        self.save_scene = True
+        self.save_lights = False
 
-    def stereo_photometry_rendering(self,state):
-        self.stereo_photometry = state
+    def render_normal_maps(self,state):
+        self.rendering_normal_maps = state
 
 
 
