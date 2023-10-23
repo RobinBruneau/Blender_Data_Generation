@@ -59,6 +59,7 @@ class CameraManager():
     def __init__(self):
         self.cameras = []
         self.size = (1920,1080)
+        self.depth_bit = '8'
 
     def clean_cameras(self):
         self.cameras = []

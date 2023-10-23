@@ -705,7 +705,7 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.context.scene.render.resolution_y = int(self.scene_parameters.cameras.size[1])
         bpy.context.scene.render.image_settings.file_format = 'PNG'
         bpy.context.scene.cycles.device = 'GPU'
-        bpy.context.scene.render.image_settings.color_depth = '16'
+        bpy.context.scene.render.image_settings.color_depth = self.scene_parameters.cameras.depth_bit
         bpy.context.scene.render.image_settings.compression = 0
         bpy.context.scene.view_settings.view_transform = 'Standard'
         bpy.context.scene.render.engine = 'CYCLES'
@@ -754,7 +754,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
         if self.scene_parameters.lights.fixed_light :
             output_node,normal_output_node = self.compositing_real(add_normal=False)
-            output_node.base_path = self.scene_parameters.output_path+"medium_masks/"
+            output_node.base_path = self.scene_parameters.output_path+"mask_medium/"
             _refractive_medium.pass_index = 1
 
             for cam_num,cam_k in enumerate(_all_cameras):
@@ -762,7 +762,7 @@ class ModalTimerOperator(bpy.types.Operator):
                 bpy.context.scene.camera = cam_k
                 output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                 output_node.format.file_format = "PNG"
-                bpy.context.scene.render.filepath = self.scene_parameters.output_path+"images_with/"+f'{cam_k.name}.png'
+                bpy.context.scene.render.filepath = self.scene_parameters.output_path+"image/"+f'{cam_k.name}.png'
                 bpy.ops.render.render(write_still=1)
             _refractive_medium.pass_index = 0
 
@@ -770,7 +770,7 @@ class ModalTimerOperator(bpy.types.Operator):
             _refractive_medium.pass_index = 1
             for cam_num, cam_k in enumerate(_all_cameras):
                 output_node,normal_output_node = self.compositing_real(add_normal=False)
-                output_node.base_path = self.scene_parameters.output_path + "medium_masks/"
+                output_node.base_path = self.scene_parameters.output_path + "mask_medium/"
                 print('\033[93m' + "OBJECT WITH AMBER [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
                 for light_num in range(len(_all_lights[cam_num])):
@@ -778,7 +778,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     light.hide_render = False
                     output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                     output_node.format.file_format = "PNG"
-                    bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_with/" + f'{light.name}.png'
+                    bpy.context.scene.render.filepath = self.scene_parameters.output_path + "image/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
 
                     if light_num == 0 :
@@ -804,7 +804,7 @@ class ModalTimerOperator(bpy.types.Operator):
         if self.scene_parameters.lights.fixed_light :
             _object.pass_index = 1
             output_node,normal_output_node = self.compositing_real()
-            output_node.base_path = self.scene_parameters.output_path + "images_masks_without/"
+            output_node.base_path = self.scene_parameters.output_path + "mask/"
             normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
 
             for cam_num,cam_k in enumerate(_all_cameras):
@@ -816,7 +816,7 @@ class ModalTimerOperator(bpy.types.Operator):
                 normal_output_node.format.file_format = "PNG"
                 normal_output_node.format.color_depth = "16"
                 normal_output_node.format.compression = 0
-                bpy.context.scene.render.filepath = self.scene_parameters.output_path+"images_without/" + f'{cam_k.name}.png'
+                bpy.context.scene.render.filepath = self.scene_parameters.output_path+"image/" + f'{cam_k.name}.png'
                 bpy.ops.render.render(write_still=1)
             _refractive_medium.hide_render = False
             _object.pass_index = 0
@@ -825,7 +825,7 @@ class ModalTimerOperator(bpy.types.Operator):
             _object.pass_index = 1
             for cam_num, cam_k in enumerate(_all_cameras):
                 output_node,normal_output_node = self.compositing_real()
-                output_node.base_path = self.scene_parameters.output_path + "images_masks_without/"
+                output_node.base_path = self.scene_parameters.output_path + "mask/"
                 normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
                 print(output_node)
                 print(normal_output_node)
@@ -840,7 +840,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     normal_output_node.format.file_format = "PNG"
                     normal_output_node.format.color_depth = "16"
                     normal_output_node.format.compression = 0
-                    bpy.context.scene.render.filepath = self.scene_parameters.output_path + "images_without/" + f'{light.name}.png'
+                    bpy.context.scene.render.filepath = self.scene_parameters.output_path + "image/" + f'{light.name}.png'
                     bpy.ops.render.render(write_still=1)
                     if light_num != 0 :
                         output_node,normal_output_node = self.compositing_real(add_mask=False,add_normal=False)
