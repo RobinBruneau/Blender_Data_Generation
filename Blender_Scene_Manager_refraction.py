@@ -7,7 +7,7 @@ def generate_blender_scene():
     object_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.obj"
     object_texture_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma_normal.png"
     medium_path = ""
-    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50_3/")
+    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50_normal/")
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -36,7 +36,7 @@ def generate_blender_scene():
     #    - semi_sphere_directionnal_per_camera (a set of directional lights for each camera)
     lm = LightManager()
     #lm.add_ambiant(1.0)
-    lm.fixed_ambiant(color=(1.0,1.0,1.0,1.0),strength=1.57)
+    lm.fixed_ambiant(color=(1.0,1.0,1.0,1.0),strength=1.0)
     #lm.semi_sphere_area_per_camera(radius=10,cameras=cm.cameras,number_lights=10,colors=[(1.0,1.0,1.0) for i in range(len(cm.cameras))],strengths=[1500 for i in range(len(cm.cameras))],max_angle=67.5)
 
     #lights_data = np.load("D:/PhD/Projects/Playing_with_NeuS/data/normal_sdmunips/lights_canonic_3.npz")

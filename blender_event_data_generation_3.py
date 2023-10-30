@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(__file__))
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 from _tools.object_3D import object_3D
-from Blender_Scene_Manager_refraction import generate_blender_scene
+from Blender_Scene_Manager import generate_blender_scene
 import random
 import easy_keys
 
@@ -106,16 +106,14 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.context.scene.collection.children.link(objects_collection)
         bpy.context.scene.collection.children.link(look_at_collection)
 
-        _object = self.generate_object()
-        refractive_medium = self.generate_refractive_medium()
-        #plans = self.generate_plans()
+        all_materials = self.generate_materials()
+        _object = self.generate_object(all_materials)
         all_cams = self.generate_cameras()
         all_lights = self.generate_lights()
-        all_materials = self.generate_materials()
+
         self.apply_rendering_params()
 
-        _data = {"object": _object, "refractive_medium": refractive_medium,
-                 "all_cams": all_cams,"all_lights":all_lights, "all_materials": all_materials}
+        _data = {"object": _object,"all_cams": all_cams,"all_lights":all_lights, "all_materials": all_materials}
 
         return _data
 
@@ -158,7 +156,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     light.name = light_param.id
                     light.data.energy = light_param.strength
                     light.data.color = light_param.color
-                    light.visible_glossy = False
+                    light.visible_glossy = True
                     constraint = light.constraints.new(type='TRACK_TO')
                     constraint.target = self.empty_centered_point
                     bpy.context.scene.collection.objects.unlink(light)
@@ -171,7 +169,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     light.data.energy = light_param.strength
                     light.data.color = light_param.color
                     light.data.size = 10
-                    light.visible_glossy = False
+                    light.visible_glossy = True
                     light.data.spread = 0
                     constraint = light.constraints.new(type='TRACK_TO')
                     constraint.target = self.empty_centered_point
@@ -192,7 +190,7 @@ class ModalTimerOperator(bpy.types.Operator):
                         light.data.energy = light_param.strength
                         light.data.color = light_param.color
                         light.hide_render = True
-                        light.visible_glossy = False
+                        light.visible_glossy = True
                         constraint = light.constraints.new(type='TRACK_TO')
                         constraint.target = self.empty_centered_point
                         bpy.context.scene.collection.objects.unlink(light)
@@ -206,7 +204,7 @@ class ModalTimerOperator(bpy.types.Operator):
                         light.data.energy = light_param.strength
                         light.data.color = light_param.color
                         light.hide_render = True
-                        light.visible_glossy = False
+                        light.visible_glossy = True
                         light.data.spread = 0
                         light.data.size = 10
                         constraint = light.constraints.new(type='TRACK_TO')
@@ -252,10 +250,8 @@ class ModalTimerOperator(bpy.types.Operator):
         material_object_texture = bpy.data.materials.new(name="object_texture")
         material_object_texture.use_nodes = True
         material_object_texture.node_tree.nodes.remove(material_object_texture.node_tree.nodes.get('Principled BSDF'))
-        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeEmission')
-        NodeBSDF.inputs[1].default_value = 1.0
-
-        #NodeBSDF.inputs["Roughness"].default_value = 0.0
+        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeBsdfDiffuse')
+        NodeBSDF.inputs["Roughness"].default_value = 0.0
         if self.scene_parameters.object.type == "path" :
             Node_TEX = material_object_texture.node_tree.nodes.new('ShaderNodeTexImage')
             Node_TEX.image = bpy.data.images.load(self.scene_parameters.object.texture_path)
@@ -264,7 +260,7 @@ class ModalTimerOperator(bpy.types.Operator):
             Node_output = material_object_texture.node_tree.nodes.get('Material Output')
             links = material_object_texture.node_tree.links
             links.new(Node_TEX.outputs["Color"], NodeBSDF.inputs["Color"])
-            links.new(NodeBSDF.outputs["Emission"], Node_output.inputs["Surface"])
+            links.new(NodeBSDF.outputs["BSDF"], Node_output.inputs["Surface"])
         else :
             Node_output = material_object_texture.node_tree.nodes.get('Material Output')
             NodeBSDF.inputs["Color"].default_value = (1.0,1.0,1.0,1.0)
@@ -308,44 +304,20 @@ class ModalTimerOperator(bpy.types.Operator):
 
         return all_materials
 
-    def generate_object(self):
+    def generate_object(self,_all_materials):
 
-        object_parameters = self.scene_parameters.object
-        if object_parameters.type == "path" :
-
-            bpy.ops.import_scene.obj(filepath=object_parameters.path)
-            _object = bpy.context.selected_objects[0]
-            _object.name = "Object"
-
-            if len(object_parameters.location) != 0 :
-                _object.location.x = object_parameters.location[0]
-                _object.location.y = object_parameters.location[1]
-                _object.location.z = object_parameters.location[2]
-
-            if len(object_parameters.scale) != 0 :
-                _object.scale.x = object_parameters.scale[0]
-                _object.scale.y = object_parameters.scale[1]
-                _object.scale.z = object_parameters.scale[2]
-
-            if len(object_parameters.rotation) != 0 :
-                _object.rotation_euler.x = object_parameters.rotation[0]
-                _object.rotation_euler.y = object_parameters.rotation[1]
-                _object.rotation_euler.z = object_parameters.rotation[2]
-
-            bpy.context.view_layer.update()
-            bpy.context.scene.collection.objects.unlink(_object)
-            bpy.data.collections["Object_Medium"].objects.link(_object)
-
-        if object_parameters.type == "sphere" :
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=object_parameters.radius, location=object_parameters.location,
-                                                  subdivisions=object_parameters.subdivisions)
-            _object = bpy.context.active_object
-            _object.name = "Object"
-            bpy.context.view_layer.update()
-            bpy.ops.object.shade_smooth()
-            bpy.context.view_layer.update()
-
-
+        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha.obj")
+        _object = bpy.context.selected_objects[0]
+        _object.name = "Object"
+        _object.location.x = 0.0
+        _object.location.y = 0.0
+        _object.location.z = 0.0
+        _object.scale.x = 1.0
+        _object.scale.y = 1.0
+        _object.scale.z = 1.0
+        _object.active_material = _all_materials["Marble"]
+        _object.pass_index = 1
+        bpy.context.view_layer.update()
 
         return _object
 
@@ -613,38 +585,6 @@ class ModalTimerOperator(bpy.types.Operator):
 
         return cryptomatte_node,viewer_node
 
-    def compositing_normals():
-        # switch on nodes and get reference
-        bpy.context.scene.use_nodes = True
-        tree = bpy.context.scene.node_tree
-
-        # clear default nodes
-        for node in tree.nodes:
-            tree.nodes.remove(node)
-
-        # create input image node
-        image_node = tree.nodes.new(type='CompositorNodeRLayers')
-        image_node.location = 0, 0
-
-        # create output node
-        comp_node = tree.nodes.new('CompositorNodeComposite')
-        comp_node.location = 400, 0
-
-        curve_rgb_node = tree.nodes.new(type="CompositorNodeCurveRGB")
-        red = curve_rgb_node.mapping.curves[0]
-        loc = red.points[0].location
-        loc[1] = 0.5
-        green = curve_rgb_node.mapping.curves[1]
-        loc = green.points[0].location
-        loc[1] = 0.5
-        blue = curve_rgb_node.mapping.curves[2]
-        loc = blue.points[0].location
-        loc[1] = 0.5
-        # link nodes
-        links = tree.links
-        link = links.new(image_node.outputs["Normal"], curve_rgb_node.inputs["Image"])
-        link = links.new(curve_rgb_node.outputs["Image"], comp_node.inputs["Image"])
-
     def compositing_real(self,add_mask=True,add_normal=True):
         # switch on nodes and get reference
         bpy.context.scene.use_nodes = True
@@ -734,6 +674,8 @@ class ModalTimerOperator(bpy.types.Operator):
             bpy.context.scene.display_settings.display_device = 'None'
             bpy.context.scene.cycles.use_denoising = True
         else :
+            print("ok")
+            bpy.context.scene.display_settings.display_device = 'None'
             bpy.context.scene.cycles.max_bounces = 200
             bpy.context.scene.cycles.glossy_bounces = 100
             bpy.context.scene.cycles.transmission_bounces = 40
@@ -742,87 +684,20 @@ class ModalTimerOperator(bpy.types.Operator):
             bpy.context.scene.cycles.volume_bounces = 10
 
 
-    def render_object_with_amber(self):
+    def render_object_and_normals(self):
 
         bpy.context.scene.cycles.samples = 512
         _object = self._scene_data["object"]
-        _refractive_medium = self._scene_data["refractive_medium"]
-        _all_materials = self._scene_data["all_materials"]
-        if self.scene_parameters.object.material == "" :
-            _object.active_material = _all_materials["object"]
-        else :
-            _object.active_material = _all_materials[self.scene_parameters.object.material]
-        _refractive_medium.active_material = _all_materials["refractive_medium"]
         _all_cameras = self._scene_data["all_cams"]
         _all_lights = self._scene_data["all_lights"]
 
         if self.scene_parameters.lights.fixed_light :
-            output_node,normal_output_node = self.compositing_real(add_normal=False)
-            output_node.base_path = self.scene_parameters.output_path+"mask_medium/"
-            normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
-            _refractive_medium.pass_index = 1
-
-            for cam_num,cam_k in enumerate(_all_cameras):
-                print('\033[93m' + "OBJECT WITH AMBER [{}/{}]\n".format(cam_num+1, len(_all_cameras)) + '\033[0m')
-                bpy.context.scene.camera = cam_k
-                output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-                output_node.format.file_format = "PNG"
-                normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-                normal_output_node.format.file_format = "PNG"
-                normal_output_node.format.color_depth = "16"
-                normal_output_node.format.compression = 0
-                bpy.context.scene.render.filepath = self.scene_parameters.output_path+"image/"+f'{cam_k.name}.png'
-                bpy.ops.render.render(write_still=1)
-            _refractive_medium.pass_index = 0
-
-        else :
-            _refractive_medium.pass_index = 1
-            for cam_num, cam_k in enumerate(_all_cameras):
-                output_node,normal_output_node = self.compositing_real(add_normal=False)
-                output_node.base_path = self.scene_parameters.output_path + "mask_medium/"
-                normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
-                print('\033[93m' + "OBJECT WITH AMBER [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
-                bpy.context.scene.camera = cam_k
-                for light_num in range(len(_all_lights[cam_num])):
-                    light = _all_lights[cam_num][light_num]
-                    light.hide_render = False
-                    output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-                    output_node.format.file_format = "PNG"
-                    normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-                    normal_output_node.format.file_format = "PNG"
-                    normal_output_node.format.color_depth = "16"
-                    normal_output_node.format.compression = 0
-                    bpy.context.scene.render.filepath = self.scene_parameters.output_path + "image/" + f'{light.name}.png'
-                    bpy.ops.render.render(write_still=1)
-
-                    if light_num == 0 :
-                        output_node,normal_output_node = self.compositing_real(add_mask=False,add_normal=False)
-                    light.hide_render = True
-            _refractive_medium.pass_index = 0
-
-    def render_object_without_amber(self):
-
-        bpy.context.scene.cycles.samples = 512
-        _object = self._scene_data["object"]
-        _refractive_medium = self._scene_data["refractive_medium"]
-        _refractive_medium.hide_render = True
-        _all_materials = self._scene_data["all_materials"]
-        if self.scene_parameters.object.material == "":
-            _object.active_material = _all_materials["object"]
-        else:
-            _object.active_material = _all_materials[self.scene_parameters.object.material]
-        _refractive_medium.active_material = _all_materials["refractive_medium"]
-        _all_cameras = self._scene_data["all_cams"]
-        _all_lights = self._scene_data["all_lights"]
-
-        if self.scene_parameters.lights.fixed_light :
-            _object.pass_index = 1
             output_node,normal_output_node = self.compositing_real()
             output_node.base_path = self.scene_parameters.output_path + "mask/"
             normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
 
             for cam_num,cam_k in enumerate(_all_cameras):
-                print('\033[93m' + "OBJECT WITHOUT AMBER [{}/{}]\n".format(cam_num+1,len(_all_cameras)) + '\033[0m')
+                print('\033[93m' + "OBJECT NORMALS / LIGHTS [{}/{}]\n".format(cam_num+1,len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
                 output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                 output_node.format.file_format = "PNG"
@@ -832,18 +707,15 @@ class ModalTimerOperator(bpy.types.Operator):
                 normal_output_node.format.compression = 0
                 bpy.context.scene.render.filepath = self.scene_parameters.output_path+"image/" + f'{cam_k.name}.png'
                 bpy.ops.render.render(write_still=1)
-            _refractive_medium.hide_render = False
-            _object.pass_index = 0
 
         else :
-            _object.pass_index = 1
             for cam_num, cam_k in enumerate(_all_cameras):
                 output_node,normal_output_node = self.compositing_real()
                 output_node.base_path = self.scene_parameters.output_path + "mask/"
                 normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
                 print(output_node)
                 print(normal_output_node)
-                print('\033[93m' + "OBJECT WITHOUT AMBER [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
+                print('\033[93m' + "OBJECT NORMALS / LIGHTS [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
                 bpy.context.scene.camera = cam_k
                 for light_num in range(len(_all_lights[cam_num])):
                     light = _all_lights[cam_num][light_num]
@@ -859,8 +731,19 @@ class ModalTimerOperator(bpy.types.Operator):
                     if light_num != 0 :
                         output_node,normal_output_node = self.compositing_real(add_mask=False,add_normal=False)
                     light.hide_render = True
-            _refractive_medium.hide_render = False
-            _object.pass_index = 0
+
+    def render_object_albedo(self):
+        bpy.context.scene.cycles.samples = 512
+        _object = self._scene_data["object"]
+        _all_cameras = self._scene_data["all_cams"]
+        _all_lights = self._scene_data["all_lights"]
+        self.compositing_real(add_mask=False,add_normal=False)
+        for cam_num,cam_k in enumerate(_all_cameras):
+            print('\033[93m' + "OBJECT ALBEDO [{}/{}]\n".format(cam_num+1,len(_all_cameras)) + '\033[0m')
+            bpy.context.scene.camera = cam_k
+            bpy.context.scene.render.filepath = self.scene_parameters.output_path+"albedo/" + f'{cam_k.name}.png'
+            bpy.ops.render.render(write_still=1)
+
 
     def create_output_folders(self):
         if not os.path.exists(self.scene_parameters.output_path):
@@ -869,26 +752,23 @@ class ModalTimerOperator(bpy.types.Operator):
             os.mkdir(self.scene_parameters.output_path+"image/")
         if not os.path.exists(self.scene_parameters.output_path+"mask/"):
             os.mkdir(self.scene_parameters.output_path+"mask/")
-        if not os.path.exists(self.scene_parameters.output_path+"image/"):
-            os.mkdir(self.scene_parameters.output_path+"image/")
-        if not os.path.exists(self.scene_parameters.output_path+"mask/"):
-            os.mkdir(self.scene_parameters.output_path+"mask/")
-        if not os.path.exists(self.scene_parameters.output_path+"mask_medium/"):
-            os.mkdir(self.scene_parameters.output_path+"mask_medium/")
         if not os.path.exists(self.scene_parameters.output_path+"normal/"):
             os.mkdir(self.scene_parameters.output_path+"normal/")
+        if not os.path.exists(self.scene_parameters.output_path+"albedo/"):
+            os.mkdir(self.scene_parameters.output_path+"albedo/")
 
     def rename(self):
-        path_medium_mask = glob.glob(self.scene_parameters.output_path+"mask_medium/*")
-        for p in path_medium_mask :
-            name = p.split("medium_masks/")[-1].split("_cut_")[0]
-            os.rename(p,self.scene_parameters.output_path+"mask_medium/"+name+".png")
-
         path_image_mask = glob.glob(self.scene_parameters.output_path + "mask/*")
         for p in path_image_mask:
+            p = p.replace("\\","/")
             name = p.split("mask/")[-1].split("_cut_")[0]
             os.rename(p, self.scene_parameters.output_path + "mask/" + name + ".png")
 
+        path_image_mask = glob.glob(self.scene_parameters.output_path + "normal/*")
+        for p in path_image_mask:
+            p = p.replace("\\", "/")
+            name = p.split("normal/")[-1].split("_cut_")[0]
+            os.rename(p, self.scene_parameters.output_path + "normal/" + name + ".png")
 
     def modal(self, context, event):
 
@@ -906,63 +786,23 @@ class ModalTimerOperator(bpy.types.Operator):
             if (not self.first_F1) and self.first_F5 :
                 self.first_F5 = False
 
-                if self.scene_parameters.render_without :
-                    self.render_object_without_amber()
-                if  self.scene_parameters.render_with :
-                    self.render_object_with_amber()
+                if self.scene_parameters.save_scene :
+                    bpy.ops.wm.save_as_mainfile(filepath=self.scene_parameters.output_path + "/scene.blend")
+                self.render_object_and_normals()
+                bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+                self._scene_data["object"].active_material = self._scene_data["all_materials"]["Marble_albedo"]
+                bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
+                bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = 1
+                self.render_object_albedo()
 
                 self.save_cam_params()
                 self.save_interface_data()
                 self.save_lights_params()
 
-                self.setup_real()
-                if self.scene_parameters.save_scene :
-                    bpy.ops.wm.save_as_mainfile(filepath=self.scene_parameters.output_path + "/scene.blend")
-                self.activate_film(True)
-                self.cryptomatte_node,self.viewer_node = self.compositing_cryptomatte()
-                easy_keys.run(push_f7())
-
-
-        if event.type in {'F7'}:
-            if (not self.first_F1) and self.not_f7:
-                if self.ind_render < len(self.l_render) :
-                    if self.ind_cam_k < self.nb_cam  :
-                        print('\033[93m' + "OBJECT AMBER MASK [{}/{}]\n".format(self.ind_cam_k + 1,self.nb_cam) + '\033[0m')
-                        self.cryptomatte_node.matte_id = self.l_object[self.ind_render][0].name
-                        cam_k = self._scene_data["all_cams"][self.ind_cam_k]
-                        bpy.context.scene.camera = cam_k
-                        bpy.ops.render.render(write_still=0)
-                        self.ind_cam_k += 1
-                        self.ind_object = 0
-                        self.not_f7 = False
-                        self.not_f8 = True
-                        easy_keys.run(push_f8())
-                    else :
-                        bpy.app.use_event_simulate = False
-                        bpy.context.window.workspace = bpy.data.workspaces['Layout']
-                        self.activate_film(False)
-                        self.global_white_light(False)
-                        if self.not_finished :
-                            self.rename()
-                            self.not_finished = False
-                        #bpy.ops.wm.quit_blender()
-
-                else :
-                    bpy.app.use_event_simulate = False
-                    bpy.context.window.workspace = bpy.data.workspaces['Layout']
-                    self.activate_film(False)
-                    self.global_white_light(False)
-                    if self.not_finished:
-                        self.rename()
-                        self.not_finished = False
-                    # bpy.ops.wm.quit_blender()
-
-        if event.type in {'F8'}:
-            if (not self.first_F1) and self.not_f8 :
-                bpy.data.images["Viewer Node"].save_render(filepath=self.output_render[self.ind_render]+f"{(3-len(str(self.ind_cam_k-1)))*'0'+str(self.ind_cam_k-1)}.png")
-                easy_keys.run(push_f7())
-                self.not_f7 = True
-                self.not_f8 = False
+                bpy.app.use_event_simulate = False
+                bpy.context.window.workspace = bpy.data.workspaces['Layout']
+                self.rename()
+                bpy.ops.wm.quit_blender()
 
         return {'PASS_THROUGH'}
 
