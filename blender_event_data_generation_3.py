@@ -306,7 +306,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
     def generate_object(self,_all_materials):
 
-        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha.obj")
+        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/buddha_diligentmv.obj")
         _object = bpy.context.selected_objects[0]
         _object.name = "Object"
         _object.location.x = 0.0

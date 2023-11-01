@@ -15,10 +15,14 @@ def generate_blender_scene():
     #    - single_camera (give your location and rotation/look_at)
     #    - multi_cameras (gives your locations and details)
     cm = CameraManager()
-    size = (1920,1080)
+    size = (612,512)
     # ortho = 1.7
     # perspec = 50
     # cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
+    cam_data = np.load("D:/PhD/Projects/Playing_with_NeuS/data/buddhaPNG_Med100_Im3-60/cameras.npz")
+    for k in range(20):
+        P = cam_data["world_mat_{}".format(k)][:3,:]
+
     R = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/R.npy")
     T = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/T.npy")
     C = []
