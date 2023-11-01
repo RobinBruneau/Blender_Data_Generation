@@ -22,7 +22,7 @@ def load_K_Rt_from_P(P):
     return intrinsics, pose
 
 
-folder = "D:/PhD/Projects/Playing_with_NeuS/data/Boudha_marble_1920_1080_MVPS/"
+folder = "D:/PhD/Projects/Playing_with_NeuS/data/Boudha_marble_612_512_MVPS/"
 camera_file = folder + "cameras.npz"
 
 data_cam = np.load(camera_file)
