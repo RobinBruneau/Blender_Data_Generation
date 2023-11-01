@@ -48,8 +48,6 @@ def generate_blender_scene():
     cm = CameraManager()
     size = (sx, sy)
     cm.from_camera_RT(C, look_at, lens=lens)
-
-    cm.from_camera_RT(C,lens=50)
     cm.size = size
     cm.depth_bit = '16'
     #cm.sphere_cameras(radius=11.5, number_cameras=20, lens=50, type="perspective",size=size)

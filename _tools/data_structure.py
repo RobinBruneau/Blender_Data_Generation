@@ -65,11 +65,11 @@ class CameraManager():
         self.cameras = []
 
 
-    def from_camera_RT(self,centers,lens):
+    def from_camera_RT(self,centers,look_at,lens):
         self.clean_cameras()
         self.type = "perspective"
         for k in range(len(centers)):
-            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=np.array([0.0, 0.0, 0.0]))
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=look_at[k].reshape(3))
             self.cameras.append(c)
 
     def ring_cameras(self,height,radius,number_cameras,lens):

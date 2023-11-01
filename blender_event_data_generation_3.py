@@ -224,6 +224,7 @@ class ModalTimerOperator(bpy.types.Operator):
             cam_data = bpy.data.cameras.new(cam_parameters.id)
             cam = bpy.data.objects.new(cam_parameters.id, cam_data)
             cam.location = cam_parameters.location
+            cam.data.clip_end = 100000
             if cam_parameters.is_looking_at :
                 cam.rotation_euler = [0.0, 0.0, 0.0]
                 constraint = cam.constraints.new(type='TRACK_TO')
@@ -231,6 +232,8 @@ class ModalTimerOperator(bpy.types.Operator):
                 look_at = bpy.context.selected_objects[0]
                 bpy.context.scene.collection.objects.unlink(look_at)
                 bpy.data.collections["Look_at"].objects.link(look_at)
+
+
                 constraint.target = look_at
             else :
                 cam.rotation_euler = cam_parameters.rotation
