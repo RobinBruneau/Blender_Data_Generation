@@ -38,6 +38,6 @@ if __name__ == '__main__':
     # subprocess.check_call("./blender --enable-event-simulate --python {} ".format(path_code_python))
 
     # 3 : set normal maps in cameras views
-    world_to_cam_normals(output_folder)
+    #world_to_cam_normals(output_folder)
 
 

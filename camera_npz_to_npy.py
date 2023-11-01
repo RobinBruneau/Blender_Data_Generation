@@ -32,6 +32,8 @@ def cameras_npz_unpacked(folder="",camera_file=""):
                 for k in range(nb_views):
                     P_k = data_cam["world_mat_{}".format(k)]
                     K,RT = load_K_Rt_from_P(P_k[:3,:])
+                    K[0,2] = 306
+                    K[1,2] = 256
                     lr.append(RT[:3,:3].T)
                     lt.append(-RT[:3,:3].T @ RT[:3,[3]])
                     lk.append(K[:3,:3])

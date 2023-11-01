@@ -209,7 +209,11 @@ class ModalTimerOperator():
         object_parameters = self.scene_parameters.object
         if object_parameters.type == "path" :
 
-            bpy.ops.import_mesh.ply(filepath=object_parameters.path)
+            if object_parameters.path[-1] == "y" :
+                bpy.ops.import_mesh.ply(filepath=object_parameters.path)
+            else :
+                bpy.ops.import_scene.obj(filepath=object_parameters.path)
+
             _object = bpy.context.selected_objects[0]
             _object.name = "Object"
 
@@ -223,10 +227,10 @@ class ModalTimerOperator():
                 _object.scale.y = object_parameters.scale[1]
                 _object.scale.z = object_parameters.scale[2]
 
-            if len(object_parameters.rotation) != 0 :
-                _object.rotation_euler.x = object_parameters.rotation[0]
-                _object.rotation_euler.y = object_parameters.rotation[1]
-                _object.rotation_euler.z = object_parameters.rotation[2]
+
+            _object.rotation_euler.x = 0
+            _object.rotation_euler.y = 0
+            _object.rotation_euler.z = 0
 
             bpy.context.view_layer.update()
             bpy.context.scene.collection.objects.unlink(_object)
@@ -601,8 +605,8 @@ class ModalTimerOperator():
 
         for cam_num, cam_k in enumerate(_all_cameras):
             output_node,normal_output_node = self.compositing_real()
-            output_node.base_path = self.scene_parameters.output_path + "mesh_mask/"
-            normal_output_node.base_path = self.scene_parameters.output_path + "mesh_normal/"
+            output_node.base_path = self.scene_parameters.output_path + "mask/"
+            normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
             print('\033[93m' + "OBJECT NORMAL MAPS [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
             bpy.context.scene.camera = cam_k
             output_node.file_slots[0].path = f'{cam_k.name}_cut_'
@@ -617,29 +621,29 @@ class ModalTimerOperator():
     def create_output_folders(self):
         if not os.path.exists(self.scene_parameters.output_path):
             os.mkdir(self.scene_parameters.output_path)
-        if not os.path.exists(self.scene_parameters.output_path+"mesh_mask/"):
-            os.mkdir(self.scene_parameters.output_path+"mesh_mask/")
-        if not os.path.exists(self.scene_parameters.output_path+"mesh_normal/"):
-            os.mkdir(self.scene_parameters.output_path+"mesh_normal/")
+        if not os.path.exists(self.scene_parameters.output_path+"mask/"):
+            os.mkdir(self.scene_parameters.output_path+"mask/")
+        if not os.path.exists(self.scene_parameters.output_path+"normal/"):
+            os.mkdir(self.scene_parameters.output_path+"normal/")
 
     def rename(self):
-        path_medium_mask = glob.glob(self.scene_parameters.output_path+"mesh_normal/*cut*")
+        path_medium_mask = glob.glob(self.scene_parameters.output_path+"/normal/*cut*")
         for p in path_medium_mask :
             p = p.replace("\\","/")
-            name = p.split("mesh_normal/")[-1].split("_cut_")[0]
-            if os.path.exists(self.scene_parameters.output_path+"mesh_normal/"+name+".png"):
-                os.remove(self.scene_parameters.output_path+"mesh_normal/"+name+".png")
-            os.rename(p,self.scene_parameters.output_path+"mesh_normal/"+name+".png")
+            name = p.split("normal/")[-1].split("_cut_")[0]
+            if os.path.exists(self.scene_parameters.output_path+"/normal/"+name+".png"):
+                os.remove(self.scene_parameters.output_path+"/normal/"+name+".png")
+            os.rename(p,self.scene_parameters.output_path+"/normal/"+name+".png")
 
-        path_image_mask = glob.glob(self.scene_parameters.output_path + "mesh_mask/*cut*")
+        path_image_mask = glob.glob(self.scene_parameters.output_path + "/mask/*cut*")
         for p in path_image_mask:
             p = p.replace("\\", "/")
-            name = p.split("mesh_mask/")[-1].split("_cut_")[0]
-            if os.path.exists(self.scene_parameters.output_path+"mesh_mask/"+name+".png"):
-                os.remove(self.scene_parameters.output_path+"mesh_mask/"+name+".png")
-            os.rename(p, self.scene_parameters.output_path + "mesh_mask/" + name + ".png")
+            name = p.split("mask/")[-1].split("_cut_")[0]
+            if os.path.exists(self.scene_parameters.output_path+"/mask/"+name+".png"):
+                os.remove(self.scene_parameters.output_path+"/mask/"+name+".png")
+            os.rename(p, self.scene_parameters.output_path + "/mask/" + name + ".png")
 
-        os.remove(self.scene_parameters.output_path+"will_be_removed.png")
+        os.remove(self.scene_parameters.output_path+"/will_be_removed.png")
 
 
     def render(self):
@@ -647,6 +651,7 @@ class ModalTimerOperator():
         self.create_output_folders()
         self._scene_data = self.generate_fixed_scene()
         self.render_object_normal_maps()
+        self.rename()
         bpy.ops.wm.quit_blender()
 
 
