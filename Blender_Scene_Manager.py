@@ -22,15 +22,33 @@ def generate_blender_scene():
     # cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
 
     cam_data = np.load("D:/PhD/Projects/Playing_with_NeuS/data/buddhaPNG_Med100_Im3-60/cameras_unpacked.npz")
-
-    # R = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/R.npy")
-    # T = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/T.npy")
-    R = cam_data["R"]
-    T = cam_data["T"]
+    '''
+    R = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/R.npy")
+    T = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/T.npy")
     C = []
     for k in range(R.shape[0]):
-        C.append((-R[k,:,:].reshape(3,3).T @ T[[k],:]).reshape(3))
-        #C.append((-R[:, :, k].reshape(3, 3).T @ T[:, [k]]).reshape(3))
+        C.append((-R[:, :, k].reshape(3, 3).T @ T[:, [k]]).reshape(3))
+    '''
+    data_cam = np.load("D:/PhD/Projects/Playing_with_NeuS/data/buddhaPNG_Med100_Im3-60/cameras_unpacked.npz")
+    K = data_cam["K"]
+    R = data_cam["R"]
+    T = data_cam["T"]
+
+    C = []
+    look_at = []
+    for k in range(R.shape[0]):
+        C.append((-R[k, :, :].reshape(3, 3).T @ T[[k], :]).reshape(3))
+        look_at.append((R[k, :, :].reshape(3, 3).T @ (np.array([[0], [0], [1]]) - T[[k], :])).reshape(3))
+
+    sx = int(np.round(K[0, 0, 2] * 2))
+    sy = int(np.round(K[0, 1, 2] * 2))
+    lens = K[0, 0, 0] * 36 / sx
+
+    # GENERATE CAMERAS
+    cm = CameraManager()
+    size = (sx, sy)
+    cm.from_camera_RT(C, look_at, lens=lens)
+
     cm.from_camera_RT(C,lens=50)
     cm.size = size
     cm.depth_bit = '16'
