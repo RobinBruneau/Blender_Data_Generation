@@ -7,7 +7,7 @@ def generate_blender_scene():
     object_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.obj"
     object_texture_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.png"
     medium_path = ""
-    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Boudha_marble_320_180_MVPS/")
+    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Boudha_marble_1920_1080_MVPS/")
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -15,7 +15,8 @@ def generate_blender_scene():
     #    - single_camera (give your location and rotation/look_at)
     #    - multi_cameras (gives your locations and details)
     cm = CameraManager()
-    size = (320,180)
+    #size = (320,180)
+    size = (1920, 1080)
     # ortho = 1.7
     # perspec = 50
     # cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
@@ -46,7 +47,7 @@ def generate_blender_scene():
     for k in range(R.shape[2]):
         lights.append(lights_data["cam_{}".format(k)])
     #lm.from_ligth_npz(cameras=cm.cameras,lights=lights, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))])
-    lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=10, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
+    lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=3, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
     #lm.fixed_directionnals(directions=[np.array([1.0,0.0,0.0]).reshape(3,1),np.array([0.0,1.0,0.0]).reshape(3,1),np.array([0.0,0.0,1.0]).reshape(3,1)],colors = [(1.0,1.0,1.0) for i in range(3)],strengths = [np.pi,np.pi,np.pi])
 
     # OBJECT
