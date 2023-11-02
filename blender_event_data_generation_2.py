@@ -306,6 +306,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
     def generate_object(self,_all_materials):
 
+        ''''
         bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/blender_socle.obj")
         _object = bpy.context.selected_objects[0]
         _object.name = "Object_base_1"
@@ -357,7 +358,33 @@ class ModalTimerOperator(bpy.types.Operator):
         _object.active_material = _all_materials["mat_noir"]
         _object.pass_index = 1
         bpy.context.view_layer.update()
+        '''
 
+        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha_small.obj")
+        _object = bpy.context.selected_objects[0]
+        _object.name = "Object__1"
+        _object.location.x = -1.0
+        _object.location.y = 0.0
+        _object.location.z = 0.0
+        _object.scale.x = 1.0
+        _object.scale.y = 1.0
+        _object.scale.z = 1.0
+        _object.active_material = _all_materials["mat_blanc"]
+        _object.pass_index = 1
+        bpy.context.view_layer.update()
+
+        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha_small.obj")
+        _object = bpy.context.selected_objects[0]
+        _object.name = "Object_2"
+        _object.location.x = 1.0
+        _object.location.y = 0.0
+        _object.location.z = 0.0
+        _object.scale.x = 1.0
+        _object.scale.y = 1.0
+        _object.scale.z = 1.0
+        _object.active_material = _all_materials["mat_noir"]
+        _object.pass_index = 1
+        bpy.context.view_layer.update()
 
 
             

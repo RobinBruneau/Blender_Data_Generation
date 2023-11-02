@@ -7,7 +7,7 @@ def generate_blender_scene():
     object_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.obj"
     object_texture_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.png"
     medium_path = ""
-    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Boudha_marble_612_512_MVPS/")
+    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Boudha_duo_320_180_MVPS/")
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -15,8 +15,8 @@ def generate_blender_scene():
     #    - single_camera (give your location and rotation/look_at)
     #    - multi_cameras (gives your locations and details)
     cm = CameraManager()
-    #size = (320,180)
-    size = (612, 512)
+    size = (320,180)
+    #size = (612, 512)
     # ortho = 1.7
     # perspec = 50
     # cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
@@ -46,11 +46,11 @@ def generate_blender_scene():
 
     # GENERATE CAMERAS
     cm = CameraManager()
-    size = (sx, sy)
-    cm.from_camera_RT(C, look_at, lens=lens)
+    #size = (sx, sy)
+    #cm.from_camera_RT(C, look_at, lens=lens)
     cm.size = size
     cm.depth_bit = '16'
-    #cm.sphere_cameras(radius=11.5, number_cameras=20, lens=50, type="perspective",size=size)
+    cm.sphere_cameras(radius=10, number_cameras=20, lens=50, type="perspective",size=size)
     #cm.single_camera(location=[-10,0,0],rotation=[0,0,0],lens=1.7,is_looking_at=True,looking_at=[0.0,0.0,0.0],type="orthographic")
     #cm.multi_cameras(locations=[[3,0,0],[0,3,0],[0,0,3]],rotations=[[0,0,0],[0,0,0],[0,0,0]],lens=50,is_looking_at=True,looking_at=[[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]],type="perspective")
     #cm.cameras = [cm.cameras[0]]
@@ -69,7 +69,7 @@ def generate_blender_scene():
     for k in range(R.shape[2]):
         lights.append(lights_data["cam_{}".format(k)])
     #lm.from_ligth_npz(cameras=cm.cameras,lights=lights, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))])
-    lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=3, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
+    lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=1, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
     #lm.fixed_directionnals(directions=[np.array([1.0,0.0,0.0]).reshape(3,1),np.array([0.0,1.0,0.0]).reshape(3,1),np.array([0.0,0.0,1.0]).reshape(3,1)],colors = [(1.0,1.0,1.0) for i in range(3)],strengths = [np.pi,np.pi,np.pi])
 
     # OBJECT
