@@ -39,7 +39,7 @@ def load_K_Rt_from_P(P):
 
 
 def mae() :
-    super_main_folder = "D:/PhD/Dropbox/CVPR_2024/check_normals_and_visibility/"
+    super_main_folder = "D:/PhD/Dropbox/CVPR_2024_2/results/"
     all_f = glob.glob(super_main_folder + "*")
 
     for main_folder in all_f :
@@ -132,7 +132,7 @@ def mae() :
 
 
 def mae_visibility() :
-    super_main_folder = "D:/PhD/Dropbox/CVPR_2024/check_normals_and_visibility/"
+    super_main_folder = "D:/PhD/Dropbox/CVPR_2024_2/results/"
     all_f = glob.glob(super_main_folder + "*")
 
     for main_folder in all_f :
@@ -275,9 +275,9 @@ def mae_visibility() :
                 c3 = np.array([0.0, 1.0, 0.0]).reshape(1, 3)
                 c4 = np.array([0.0, 0.0, 1.0]).reshape(1, 3)
 
-                dist_c2 = ((curvature - c2) ** 2).sum(axis=1, keepdims=True)
-                dist_c3 = ((curvature - c3) ** 2).sum(axis=1, keepdims=True)
-                dist_c4 = ((curvature - c4) ** 2).sum(axis=1, keepdims=True)
+                dist_c2 = ((visibility - c2) ** 2).sum(axis=1, keepdims=True)
+                dist_c3 = ((visibility - c3) ** 2).sum(axis=1, keepdims=True)
+                dist_c4 = ((visibility - c4) ** 2).sum(axis=1, keepdims=True)
 
                 all_dist = np.concatenate((dist_c2, dist_c3, dist_c4), axis=1)
                 ind_color = np.argmin(all_dist, axis=1)
@@ -313,7 +313,7 @@ def mae_visibility() :
 
 def visibility():
 
-    super_main_folder = "D:/PhD/Dropbox/CVPR_2024/check_normals_and_visibility/"
+    super_main_folder = "D:/PhD/Dropbox/CVPR_2024_2/results/"
     all_f = glob.glob(super_main_folder + "*")
     for main_folder in all_f :
 

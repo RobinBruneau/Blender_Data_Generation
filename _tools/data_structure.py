@@ -37,7 +37,7 @@ def euler_to_matrix(rotation):
 
 class Camera():
 
-    def __init__(self,id,location,rotation,lens,is_looking_at,looking_at,size=(1920,1080)):
+    def __init__(self,id,location,rotation,lens,shift=[0,0],is_looking_at=False,looking_at=[0],size=(1920,1080)):
 
         self.id = id
         self.location = location
@@ -45,6 +45,7 @@ class Camera():
         self.lens = lens
         self.is_looking_at = is_looking_at
         self.looking_at = looking_at
+        self.shift = shift
         self.size = size
 
     def get_looking_direction(self):
@@ -65,11 +66,11 @@ class CameraManager():
         self.cameras = []
 
 
-    def from_camera_RT(self,centers,look_at,lens):
+    def from_camera_RT(self,rotation,centers,shift,lens):
         self.clean_cameras()
         self.type = "perspective"
         for k in range(len(centers)):
-            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=None, lens=lens, is_looking_at=True,looking_at=look_at[k].reshape(3))
+            c = Camera(id=(3-len(str(k)))*"0"+str(k), location=centers[k], rotation=rotation[k], lens=lens, shift=shift)
             self.cameras.append(c)
 
     def ring_cameras(self,height,radius,number_cameras,lens):
@@ -294,6 +295,7 @@ class Scene():
         self.save_scene = True
         self.save_lights = False
         self.stereo_photometry = False
+        self.ratio_f = 1
 
     def __init__(self,cameras,object,output_path):
 
@@ -310,4 +312,6 @@ class Scene():
         self.rendering_normal_maps = state
 
 
+    def change_ratio(self,ratio):
+        self.ratio_f = ratio
 

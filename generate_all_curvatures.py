@@ -4,7 +4,7 @@ import argparse
 from camera_npz_to_npy import *
 from world_to_camera_normals import *
 
-path_code_python = "blender_event_data_generation.py"
+path_code_python = "blender_event_data_generation_vertex_color_curv.py"
 
 if __name__ == '__main__':
 
@@ -15,22 +15,21 @@ if __name__ == '__main__':
 
         cam_file = folder + "/cameras.npz"
 
-        methods = glob.glob(folder+"/result_*")
+        methods = glob.glob(folder+"/GT_curv*")
         for meth in methods :
 
-            mesh_file = glob.glob(meth+"/*.ply")
+            mesh_file = glob.glob(meth+"/*curvature_seg.obj")
             if len(mesh_file) == 0 :
                 mesh_file = glob.glob(meth+"/*.obj")[0]
             else :
                 mesh_file = mesh_file[0]
             output_folder = meth+"/"
+            output = "curvature"
 
-            if not os.path.exists(output_folder+"cameras_unpacked.npz"):
+            # 1 : unpacked cameras.npz
+            cameras_npz_unpacked(output_folder,cam_file)
 
-                # 1 : unpacked cameras.npz
-                cameras_npz_unpacked(output_folder,cam_file)
-
-                # 2 : Generate normals per view
-                os.system("blender --enable-event-simulate --python {} -- --folder {} --mesh {} ".format(path_code_python,output_folder,mesh_file))
+            # 2 : Generate normals per view
+            os.system("blender --enable-event-simulate --python {} -- --folder {} --mesh {} --output {}".format(path_code_python,output_folder,mesh_file,output))
 
 

@@ -235,6 +235,8 @@ class ModalTimerOperator():
             _object.rotation_euler.y = 0
             _object.rotation_euler.z = 0
 
+            _object.data.use_auto_smooth = False
+
             bpy.context.view_layer.update()
             bpy.context.scene.collection.objects.unlink(_object)
             bpy.data.collections["Object_Medium"].objects.link(_object)

@@ -1,6 +1,7 @@
 import os.path
 import numpy as np
 import cv2
+from scipy.spatial.transform import Rotation
 
 def load_K_Rt_from_P(P):
 
@@ -29,6 +30,7 @@ def cameras_npz_unpacked(folder="",camera_file=""):
                 lk = []
                 lr = []
                 lt = []
+                lr_euler = []
                 for k in range(nb_views):
                     P_k = data_cam["world_mat_{}".format(k)]
                     K,RT = load_K_Rt_from_P(P_k[:3,:])
@@ -36,7 +38,14 @@ def cameras_npz_unpacked(folder="",camera_file=""):
                     lt.append(-RT[:3,:3].T @ RT[:3,[3]])
                     lk.append(K[:3,:3])
 
-                data_out = {"K":lk,"R":lr,"T":lt}
+                    rb = np.eye(3)
+                    rb[1,1] = -1
+                    rb[2,2] = -1
+                    r = Rotation.from_matrix((rb @ RT[:3,:3].T).T)
+                    euler_rot = r.as_euler('xyz', degrees=True)
+                    lr_euler.append(euler_rot)
+
+                data_out = {"K":lk,"R":lr,"T":lt,"R_euler":lr_euler}
                 np.savez(folder+"cameras_unpacked.npz",**data_out)
             else :
                 raise("There is no cameras.npz in your folder")

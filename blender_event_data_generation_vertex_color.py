@@ -105,7 +105,10 @@ class ModalTimerOperator():
         _object = self.generate_object()
         all_cams = self.generate_cameras()
         self.apply_rendering_params()
-        self.global_white_light(True)
+
+        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (0.0,0.0,0.0,1.0)
+        bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = 0
+
 
         _data = {"object": _object, "all_cams": all_cams}
 
@@ -215,7 +218,7 @@ class ModalTimerOperator():
             if object_parameters.path[-1] == "y" :
                 bpy.ops.import_mesh.ply(filepath=object_parameters.path)
             else :
-                bpy.ops.import_scene.obj(filepath=object_parameters.path)
+                bpy.ops.wm.obj_import(filepath=object_parameters.path)
 
             _object = bpy.context.selected_objects[0]
             _object.name = "Object"
@@ -239,14 +242,21 @@ class ModalTimerOperator():
             bpy.context.scene.collection.objects.unlink(_object)
             bpy.data.collections["Object_Medium"].objects.link(_object)
 
-        if object_parameters.type == "sphere" :
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=object_parameters.radius, location=object_parameters.location,
-                                                  subdivisions=object_parameters.subdivisions)
-            _object = bpy.context.active_object
-            _object.name = "Object"
-            bpy.context.view_layer.update()
-            bpy.ops.object.shade_smooth()
-            bpy.context.view_layer.update()
+        # Create Object Material based on known Texture
+        material_object_texture = bpy.data.materials.new(name="object_texture")
+        material_object_texture.use_nodes = True
+        material_object_texture.node_tree.nodes.remove(
+            material_object_texture.node_tree.nodes.get('Principled BSDF'))
+        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeEmission')
+        Node_color = material_object_texture.node_tree.nodes.new('ShaderNodeVertexColor')
+        Node_color.layer_name = "Color"
+
+        Node_output = material_object_texture.node_tree.nodes.get('Material Output')
+        links = material_object_texture.node_tree.links
+        links.new(Node_color.outputs["Color"], NodeBSDF.inputs["Color"])
+        links.new(NodeBSDF.outputs["Emission"], Node_output.inputs["Surface"])
+
+        _object.active_material = material_object_texture
 
         return _object
 
@@ -578,11 +588,7 @@ class ModalTimerOperator():
         bpy.context.scene.render.image_settings.color_depth = self.scene_parameters.cameras.depth_bit
         bpy.context.scene.render.image_settings.compression = 0
         bpy.context.scene.view_settings.view_transform = 'Standard'
-        bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.use_preview_denoising = True
-        bpy.context.scene.cycles.use_denoising = False
-        bpy.context.scene.cycles.denoiser = 'OPTIX'
-        bpy.context.scene.cycles.preview_samples = 12
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
         bpy.context.scene.view_layers["ViewLayer"].use_pass_transmission_direct = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_object_index = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_object_index = True
@@ -591,46 +597,26 @@ class ModalTimerOperator():
         bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_material = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_material = True
         bpy.context.scene.view_layers["ViewLayer"].use_pass_normal = True
-        bpy.context.scene.cycles.max_bounces = 200
-        bpy.context.scene.cycles.glossy_bounces = 100
-        bpy.context.scene.cycles.transmission_bounces = 40
-        bpy.context.scene.cycles.diffuse_bounces = 40
-        bpy.context.scene.cycles.transparent_max_bounces = 10
-        bpy.context.scene.cycles.volume_bounces = 10
-        bpy.context.scene.display_settings.display_device = 'None'
-
+        #bpy.context.scene.display_settings.display_device = 'None'
         bpy.context.scene.render.pixel_aspect_x = 1
         bpy.context.scene.render.pixel_aspect_y = self.scene_parameters.ratio_f
 
-    def render_object_normal_maps(self):
+    def render_object_color(self):
 
-        bpy.context.scene.cycles.samples = 512
+        bpy.context.scene.eevee.taa_render_samples = 512
         _object = self._scene_data["object"]
         _all_cameras = self._scene_data["all_cams"]
-        _object.pass_index = 1
 
         for cam_num, cam_k in enumerate(_all_cameras):
-            output_node,normal_output_node = self.compositing_real()
-            output_node.base_path = self.scene_parameters.output_path + "mask/"
-            normal_output_node.base_path = self.scene_parameters.output_path + "normal/"
-            print('\033[93m' + "OBJECT NORMAL MAPS [{}/{}]\n".format(cam_num + 1, len(_all_cameras)) + '\033[0m')
             bpy.context.scene.camera = cam_k
-            output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-            output_node.format.file_format = "PNG"
-            normal_output_node.file_slots[0].path = f'{cam_k.name}_cut_'
-            normal_output_node.format.file_format = "PNG"
-            normal_output_node.format.color_depth = "16"
-            normal_output_node.format.compression = 0
-            bpy.context.scene.render.filepath = self.scene_parameters.output_path + 'will_be_removed.png'
+            bpy.context.scene.render.filepath = self.scene_parameters.output_path +"/visibility/"+ cam_k.name+'.png'
             bpy.ops.render.render(write_still=1)
 
     def create_output_folders(self):
         if not os.path.exists(self.scene_parameters.output_path):
             os.mkdir(self.scene_parameters.output_path)
-        if not os.path.exists(self.scene_parameters.output_path+"mask/"):
-            os.mkdir(self.scene_parameters.output_path+"mask/")
-        if not os.path.exists(self.scene_parameters.output_path+"normal/"):
-            os.mkdir(self.scene_parameters.output_path+"normal/")
+        if not os.path.exists(self.scene_parameters.output_path+"visibility/"):
+            os.mkdir(self.scene_parameters.output_path+"visibility/")
 
     def rename(self):
         path_medium_mask = glob.glob(self.scene_parameters.output_path+"/normal/*cut*")
@@ -656,8 +642,9 @@ class ModalTimerOperator():
 
         self.create_output_folders()
         self._scene_data = self.generate_fixed_scene()
-        self.render_object_normal_maps()
-        self.rename()
+        bpy.ops.wm.save_as_mainfile(filepath=self.scene_parameters.output_path + "/scene.blend")
+        self.render_object_color()
+        #self.rename()
         bpy.ops.wm.quit_blender()
 
 
