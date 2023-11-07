@@ -240,46 +240,17 @@ class ModalTimerOperator(bpy.types.Operator):
                 cam.data.type = "ORTHO"
                 cam.data.ortho_scale = cam_parameters.lens
 
+            cam.data.shift_x = cam_parameters.shift[0]
+            cam.data.shift_y = cam_parameters.shift[1]
+
+            cam.data.clip_end = 100000
+
             bpy.data.collections["Cameras"].objects.link(cam)
             all_cams.append(cam)
         return all_cams
 
     def generate_materials(self):
 
-        # Create Object Material based on known Texture
-        material_object_texture = bpy.data.materials.new(name="object_texture")
-        material_object_texture.use_nodes = True
-        material_object_texture.node_tree.nodes.remove(material_object_texture.node_tree.nodes.get('Principled BSDF'))
-        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeBsdfDiffuse')
-        NodeBSDF.inputs["Roughness"].default_value = 0.0
-        if self.scene_parameters.object.type == "path" :
-            Node_TEX = material_object_texture.node_tree.nodes.new('ShaderNodeTexImage')
-            Node_TEX.image = bpy.data.images.load(self.scene_parameters.object.texture_path)
-            if self.scene_parameters.stereo_photometry :
-                Node_TEX.image.colorspace_settings.name = 'Raw'
-            Node_output = material_object_texture.node_tree.nodes.get('Material Output')
-            links = material_object_texture.node_tree.links
-            links.new(Node_TEX.outputs["Color"], NodeBSDF.inputs["Color"])
-            links.new(NodeBSDF.outputs["BSDF"], Node_output.inputs["Surface"])
-        else :
-            Node_output = material_object_texture.node_tree.nodes.get('Material Output')
-            NodeBSDF.inputs["Color"].default_value = (1.0,1.0,1.0,1.0)
-            links = material_object_texture.node_tree.links
-            links.new(NodeBSDF.outputs["BSDF"], Node_output.inputs["Surface"])
-
-        # Create Refractive medium Material
-        material_refractive_medium = bpy.data.materials.new(name="mat_refractive")
-        material_refractive_medium.use_nodes = True
-        material_refractive_medium.node_tree.nodes.remove(
-            material_refractive_medium.node_tree.nodes.get('Principled BSDF'))
-        material_output = material_refractive_medium.node_tree.nodes.get('Material Output')
-        #NodeBSDF = material_refractive_medium.node_tree.nodes.new('ShaderNodeBsdfGlass')
-        NodeBSDF = material_refractive_medium.node_tree.nodes.new('ShaderNodeBsdfRefraction')
-        NodeBSDF.inputs["Color"].default_value = self.scene_parameters.medium.color
-        NodeBSDF.inputs["Roughness"].default_value = 0.0  # Make the glass fully transparent
-        NodeBSDF.inputs["IOR"].default_value = self.scene_parameters.medium.ior  # IOR
-        NodeBSDF.distribution = "GGX"
-        material_refractive_medium.node_tree.links.new(material_output.inputs[0], NodeBSDF.outputs[0])
 
         prefs = bpy.context.preferences
         filepaths = prefs.filepaths
@@ -294,8 +265,7 @@ class ModalTimerOperator(bpy.types.Operator):
                 with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
                     data_to.materials = data_from.materials
 
-        all_materials = {"object": material_object_texture,
-                         "refractive_medium": material_refractive_medium}
+        all_materials = {}
 
         for m in bpy.data.materials:
             all_materials.update({m.name:m})
@@ -360,28 +330,28 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.context.view_layer.update()
         '''
 
-        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha_small.obj")
+        bpy.ops.import_mesh.ply(filepath="D:/PhD/Dropbox/Data/Data/models/buddha_full.ply")
         _object = bpy.context.selected_objects[0]
         _object.name = "Object__1"
-        _object.location.x = -1.0
-        _object.location.y = 0.0
+        _object.location.x = 0
+        _object.location.y = -40
         _object.location.z = 0.0
-        _object.scale.x = 1.0
-        _object.scale.y = 1.0
-        _object.scale.z = 1.0
+        _object.scale.x = 0.9
+        _object.scale.y = 0.9
+        _object.scale.z = 0.9
         _object.active_material = _all_materials["mat_blanc"]
         _object.pass_index = 1
         bpy.context.view_layer.update()
 
-        bpy.ops.import_scene.obj(filepath="D:/PhD/Dropbox/Data/Data/models/boudha_small.obj")
+        bpy.ops.import_mesh.ply(filepath="D:/PhD/Dropbox/Data/Data/models/buddha_full.ply")
         _object = bpy.context.selected_objects[0]
         _object.name = "Object_2"
-        _object.location.x = 1.0
-        _object.location.y = 0.0
+        _object.location.x = 0
+        _object.location.y = 60
         _object.location.z = 0.0
-        _object.scale.x = 1.0
-        _object.scale.y = 1.0
-        _object.scale.z = 1.0
+        _object.scale.x = 0.9
+        _object.scale.y = 0.9
+        _object.scale.z = 0.9
         _object.active_material = _all_materials["mat_noir"]
         _object.pass_index = 1
         bpy.context.view_layer.update()
@@ -753,6 +723,8 @@ class ModalTimerOperator(bpy.types.Operator):
             bpy.context.scene.cycles.transparent_max_bounces = 10
             bpy.context.scene.cycles.volume_bounces = 10
 
+        bpy.context.scene.render.pixel_aspect_x = 1
+        bpy.context.scene.render.pixel_aspect_y = self.scene_parameters.ratio_f
 
     def render_object_and_normals(self):
 
