@@ -247,6 +247,8 @@ class ModalTimerOperator(bpy.types.Operator):
 
             bpy.data.collections["Cameras"].objects.link(cam)
             all_cams.append(cam)
+
+        print(all_cams)
         return all_cams
 
     def generate_materials(self):
@@ -740,6 +742,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
             for cam_num,cam_k in enumerate(_all_cameras):
                 print('\033[93m' + "OBJECT NORMALS / LIGHTS [{}/{}]\n".format(cam_num+1,len(_all_cameras)) + '\033[0m')
+                print('\033[93 HERE !\033[0m')
                 bpy.context.scene.camera = cam_k
                 output_node.file_slots[0].path = f'{cam_k.name}_cut_'
                 output_node.format.file_format = "PNG"
@@ -748,6 +751,7 @@ class ModalTimerOperator(bpy.types.Operator):
                 normal_output_node.format.color_depth = "16"
                 normal_output_node.format.compression = 0
                 bpy.context.scene.render.filepath = self.scene_parameters.output_path+"image/" + f'{cam_k.name}.png'
+                print('\033[93 before rendering !\033[0m')
                 bpy.ops.render.render(write_still=1)
 
         else :
@@ -831,6 +835,8 @@ class ModalTimerOperator(bpy.types.Operator):
                 if self.scene_parameters.save_scene :
                     bpy.ops.wm.save_as_mainfile(filepath=self.scene_parameters.output_path + "/scene.blend")
                 self.render_object_and_normals()
+
+
                 bpy.context.scene.render.engine = 'BLENDER_EEVEE'
                 bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
                 bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[1].default_value = 1
@@ -886,7 +892,7 @@ def push_f8():
 
 if __name__ == "__main__":
     register()
-    scene = generate_blender_scene()
+    #scene = generate_blender_scene()
     bpy.ops.wm.modal_timer_operator()
     bpy.context.window.workspace = bpy.data.workspaces['Compositing']
     random.seed(1)
