@@ -18,13 +18,13 @@ if __name__ == '__main__':
         methods = glob.glob(folder+"/GT_curv*")
         for meth in methods :
 
-            mesh_file = glob.glob(meth+"/*curvature_seg.obj")
+            mesh_file = glob.glob(meth+"/*CURV_SEG_DUR.obj")
             if len(mesh_file) == 0 :
                 mesh_file = glob.glob(meth+"/*.obj")[0]
             else :
                 mesh_file = mesh_file[0]
             output_folder = meth+"/"
-            output = "curvature"
+            output = "curvature_dur"
 
             # 1 : unpacked cameras.npz
             cameras_npz_unpacked(output_folder,cam_file)

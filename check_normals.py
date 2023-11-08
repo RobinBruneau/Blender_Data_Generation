@@ -143,7 +143,6 @@ def mae_visibility() :
         all_folders = methods + inputs
         folder_GT = main_folder+"GT"
         folder_GT_vis = main_folder + "GT_visibility"
-        folder_GT_curv = main_folder + "GT_curvature"
 
         # NORMALS GT
         path_normals_gt = glob.glob(folder_GT+"/normal/*.png")
@@ -151,11 +150,7 @@ def mae_visibility() :
 
         # VISIBILITY GT
         path_visibility_gt = glob.glob(folder_GT_vis + "/visibility/*.png")
-        visibility_gt = [(plt.imread(ngtp) * 2.0 - 1.0)[:, :, :3] for ngtp in path_visibility_gt]
-
-        # CURVATURE GT
-        path_curvature_gt = glob.glob(folder_GT_curv + "/curvature/*.png")
-        curvature_gt = [(plt.imread(ngtp) * 2.0 - 1.0)[:, :, :3] for ngtp in path_curvature_gt]
+        visibility_gt = [plt.imread(ngtp)[:, :, :3] for ngtp in path_visibility_gt]
 
         # MASK GT
         path_masks = glob.glob(folder_GT+"/mask/*.png")
@@ -197,12 +192,6 @@ def mae_visibility() :
                 shutil.rmtree(MAE_vis_folder)
             os.mkdir(MAE_vis_folder)
 
-            MAE_curv_folder = folder + "/MAE_curv/"
-            if os.path.exists(MAE_curv_folder):
-                shutil.rmtree(MAE_curv_folder)
-            os.mkdir(MAE_curv_folder)
-
-
             geodesic_folder = []
             for k in range(len(normals_folder)):
                 mask = masks[k]
@@ -221,7 +210,6 @@ def mae_visibility() :
                 #MAE = np.sum(MAE)/nb
 
                 visibility = visibility_gt[k][ind_keep]
-                curvature = curvature_gt[k][ind_keep]
 
                 # bleu -> rouge
                 #c1 = [0.0,0.5,0.5]
@@ -271,15 +259,103 @@ def mae_visibility() :
                     MAE_c5 = np.mean(MAE_c5)
                     np.save(MAE_vis_folder + (3 - len(str(k))) * "0" + str(k) + "_zone4.npy", MAE_c5)
 
-                c2 = np.array([1.0, 0.0, 0.0]).reshape(1, 3)
-                c3 = np.array([0.0, 1.0, 0.0]).reshape(1, 3)
-                c4 = np.array([0.0, 0.0, 1.0]).reshape(1, 3)
+                geodesic_folder.append(geodesic_distance)
+            all_geodesic.append(geodesic_folder)
+
+
+def mae_curvature() :
+    super_main_folder = "D:/PhD/Dropbox/CVPR_2024/check_normals_and_visibility/"
+    all_f = glob.glob(super_main_folder + "*")
+
+    for main_folder in all_f :
+        main_folder = main_folder + "/"
+        print(main_folder)
+        methods = glob.glob(main_folder+"result_*")
+        inputs = glob.glob(main_folder+"input*")
+        all_folders = methods + inputs
+        folder_GT = main_folder+"GT"
+        folder_GT_curv = main_folder + "GT_curvature"
+
+        # NORMALS GT
+        path_normals_gt = glob.glob(folder_GT+"/normal/*.png")
+        normals_gt = [(plt.imread(ngtp)*2.0-1.0)[:,:,:3] for ngtp in path_normals_gt]
+
+        # CURVATURE GT
+        path_curvature_gt = glob.glob(folder_GT_curv + "/curvature_leger/*.png")
+        curvature_gt = [plt.imread(ngtp) [:, :, :3] for ngtp in path_curvature_gt]
+
+        # MASK GT
+        path_masks = glob.glob(folder_GT+"/mask/*.png")
+        masks = [plt.imread(ngtp) for ngtp in path_masks]
+
+        camera_data = np.load(main_folder+"/cameras.npz")
+        nb_views = len(camera_data.files)//2
+        lk = []
+        lr = []
+        lt = []
+        for k in range(nb_views):
+            P_k = camera_data["world_mat_{}".format(k)]
+            K,RT = load_K_Rt_from_P(P_k[:3,:])
+            lr.append(RT[:3,:3].T)
+            lt.append(-RT[:3,:3].T @ RT[:3,[3]])
+            lk.append(K[:3,:3])
+
+        all_normals = []
+        all_geodesic = []
+        for folder in all_folders :
+            print("    > {}".format(folder))
+            path_normals_folder = glob.glob(folder+"/normal/*.png")
+            normals_folder = [(plt.imread(ngtp)*2.0-1.0)[:,:,:3] for ngtp in path_normals_folder]
+            all_normals.append(normals_folder)
+
+            path_mask_folder = glob.glob(folder + "/mask/*.png")
+            mask_folder = [plt.imread(ngtp) for ngtp in path_mask_folder]
+            if len(mask_folder[0].shape)>2:
+                for n in range(len(mask_folder)):
+                    mask_folder[n] = mask_folder[n][:,:,0]
+
+
+            MAE_folder = folder + "/MAE/"
+            if not os.path.exists(MAE_folder):
+                os.mkdir(MAE_folder)
+
+
+            MAE_curv_folder = folder + "/MAE_curv_leger/"
+            if os.path.exists(MAE_curv_folder):
+                shutil.rmtree(MAE_curv_folder)
+            os.mkdir(MAE_curv_folder)
+
+
+            geodesic_folder = []
+            for k in range(len(normals_folder)):
+                mask = masks[k]
+                mask_fold = mask_folder[k]
+                mask2 = mask + mask_fold
+                ind_keep = np.where(mask2 == 2.0)
+                ind_remove = np.where(mask2 < 2.0)
+                n1 = normals_folder[k] / np.linalg.norm(normals_folder[k],axis=2,keepdims=True)
+                n2 = normals_gt[k] / np.linalg.norm(normals_gt[k],axis=2,keepdims=True)
+                dot_n = (n1*n2).sum(axis=2).clip(-1.0,1.0)
+                geodesic_distance = np.arccos(dot_n)
+
+                MAE = np.copy(geodesic_distance)
+                MAE[ind_remove[0],ind_remove[1]] = 0.0
+                nb = len(ind_keep[0])
+                #MAE = np.sum(MAE)/nb
+
+                curvature = curvature_gt[k][ind_keep]
+
+                c2 = np.array([0.5, 0.0, 0.0]).reshape(1, 3)
+                c3 = np.array([0.5, 1.0, 0.5]).reshape(1, 3)
+                c4 = np.array([0.0, 0.0, 0.5]).reshape(1, 3)
+                c5 = np.array([0.0, 0.0, 0.0]).reshape(1, 3)
 
                 dist_c2 = ((curvature - c2) ** 2).sum(axis=1, keepdims=True)
                 dist_c3 = ((curvature - c3) ** 2).sum(axis=1, keepdims=True)
                 dist_c4 = ((curvature - c4) ** 2).sum(axis=1, keepdims=True)
+                dist_c5 = ((curvature - c5) ** 2).sum(axis=1, keepdims=True)
 
-                all_dist = np.concatenate((dist_c2, dist_c3, dist_c4), axis=1)
+                all_dist = np.concatenate((dist_c2, dist_c3, dist_c4,dist_c5), axis=1)
                 ind_color = np.argmin(all_dist, axis=1)
 
                 ind_c2 = np.where(ind_color == 0)[0]
@@ -288,7 +364,7 @@ def mae_visibility() :
                 else:
                     MAE_c2 = MAE[ind_keep[0][ind_c2], ind_keep[1][ind_c2]]
                     MAE_c2 = np.mean(MAE_c2)
-                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone1.npy", MAE_c2)
+                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone_convexe.npy", MAE_c2)
 
                 ind_c3 = np.where(ind_color == 1)[0]
                 if len(ind_c3) == 0:
@@ -296,7 +372,7 @@ def mae_visibility() :
                 else:
                     MAE_c3 = MAE[ind_keep[0][ind_c3], ind_keep[1][ind_c3]]
                     MAE_c3 = np.mean(MAE_c3)
-                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone2.npy", MAE_c3)
+                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone_normal.npy", MAE_c3)
 
                 ind_c4 = np.where(ind_color == 2)[0]
                 if len(ind_c4) == 0:
@@ -304,11 +380,12 @@ def mae_visibility() :
                 else:
                     MAE_c4 = MAE[ind_keep[0][ind_c4], ind_keep[1][ind_c4]]
                     MAE_c4 = np.mean(MAE_c4)
-                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone3.npy", MAE_c4)
+                    np.save(MAE_curv_folder + (3 - len(str(k))) * "0" + str(k) + "_zone_concave.npy", MAE_c4)
 
 
                 geodesic_folder.append(geodesic_distance)
             all_geodesic.append(geodesic_folder)
+
 
 
 def visibility():
@@ -484,3 +561,4 @@ if __name__ == "__main__" :
     #visibility()
     #mae()
     mae_visibility()
+    mae_curvature()
