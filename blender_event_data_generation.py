@@ -1,4 +1,5 @@
 import glob
+import json
 
 import bpy
 import numpy as np
@@ -252,7 +253,8 @@ class ModalTimerOperator(bpy.types.Operator):
         material_object_texture = bpy.data.materials.new(name="object_texture")
         material_object_texture.use_nodes = True
         material_object_texture.node_tree.nodes.remove(material_object_texture.node_tree.nodes.get('Principled BSDF'))
-        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeEmission')
+        #NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeEmission')
+        NodeBSDF = material_object_texture.node_tree.nodes.new('ShaderNodeBsdfDiffuse')
         NodeBSDF.inputs[1].default_value = 1.0
 
         #NodeBSDF.inputs["Roughness"].default_value = 0.0
@@ -264,7 +266,7 @@ class ModalTimerOperator(bpy.types.Operator):
             Node_output = material_object_texture.node_tree.nodes.get('Material Output')
             links = material_object_texture.node_tree.links
             links.new(Node_TEX.outputs["Color"], NodeBSDF.inputs["Color"])
-            links.new(NodeBSDF.outputs["Emission"], Node_output.inputs["Surface"])
+            links.new(NodeBSDF.outputs["BSDF"], Node_output.inputs["Surface"])
         else :
             Node_output = material_object_texture.node_tree.nodes.get('Material Output')
             NodeBSDF.inputs["Color"].default_value = (1.0,1.0,1.0,1.0)
@@ -541,6 +543,8 @@ class ModalTimerOperator(bpy.types.Operator):
         K = self.get_calibration_matrix_K_from_blender(_all_cameras[0])
         _all_R = np.zeros((3, 3, len(_all_cameras)))
         _all_T = np.zeros((3, len(_all_cameras)))
+        _all_R2 = np.zeros((len(_all_cameras),3,3))
+        _all_T2 = np.zeros((len(_all_cameras),3))
         data = {}
         for k, cam_k in enumerate(_all_cameras):
             R, T = self.get_3x4_RT_matrix_from_blender(cam_k)
@@ -549,11 +553,17 @@ class ModalTimerOperator(bpy.types.Operator):
             data.update({"world_mat_{}".format(k):P})
             _all_R[:, :, k] = R
             _all_T[:, k] = T
+            _all_R2[k,:, :] = R
+            _all_T2[k,:] = T
 
         np.savez(self.scene_parameters.output_path + "/cameras.npz", **data)
         np.save(self.scene_parameters.output_path + "/R.npy", _all_R)
         np.save(self.scene_parameters.output_path + "/T.npy", _all_T)
         np.save(self.scene_parameters.output_path + "/K.npy", K)
+        data_json = {"K":K.tolist(),"R":_all_R2.tolist(),"T":_all_T2.tolist()}
+        f=open(self.scene_parameters.output_path + "/calib.json","w")
+        json.dump(data_json,f,indent=4)
+        f.close()
         print('\033[93m' + "\nSAVE R/T/K DONE\n" + '\033[0m')
 
     def save_interface_data(self):
@@ -571,6 +581,7 @@ class ModalTimerOperator(bpy.types.Operator):
         m.init_from_blender(mw, vv, faces, doublon=False)
         m.compute_face_center_normal()
         m.save_data_as_dict(self.scene_parameters.output_path + "/interface.pkl")
+        m.save_data_as_json(self.scene_parameters.output_path + "/interface.json")
 
 
         print('\033[93m' + "SAVE INTERFACE DONE\n\n" + '\033[0m')
@@ -613,7 +624,7 @@ class ModalTimerOperator(bpy.types.Operator):
 
         return cryptomatte_node,viewer_node
 
-    def compositing_normals():
+    def compositing_normals(self):
         # switch on nodes and get reference
         bpy.context.scene.use_nodes = True
         tree = bpy.context.scene.node_tree
@@ -881,16 +892,17 @@ class ModalTimerOperator(bpy.types.Operator):
     def rename(self):
         path_medium_mask = glob.glob(self.scene_parameters.output_path+"mask_medium/*")
         for p in path_medium_mask :
-            name = p.split("medium_masks/")[-1].split("_cut_")[0]
+            name = p.split("mask_medium")[-1].split("_cut_")[0]
             os.rename(p,self.scene_parameters.output_path+"mask_medium/"+name+".png")
 
         path_image_mask = glob.glob(self.scene_parameters.output_path + "mask/*")
         for p in path_image_mask:
-            name = p.split("mask/")[-1].split("_cut_")[0]
+            name = p.split("mask")[-1].split("_cut_")[0]
             os.rename(p, self.scene_parameters.output_path + "mask/" + name + ".png")
 
 
     def modal(self, context, event):
+
 
         if event.type in {'F1'}:
             if self.first_F1 :
@@ -929,9 +941,14 @@ class ModalTimerOperator(bpy.types.Operator):
                     if self.ind_cam_k < self.nb_cam  :
                         print('\033[93m' + "OBJECT AMBER MASK [{}/{}]\n".format(self.ind_cam_k + 1,self.nb_cam) + '\033[0m')
                         self.cryptomatte_node.matte_id = self.l_object[self.ind_render][0].name
+                        print("here")
                         cam_k = self._scene_data["all_cams"][self.ind_cam_k]
+                        print(cam_k)
+                        print("here2")
                         bpy.context.scene.camera = cam_k
+                        print("here3")
                         bpy.ops.render.render(write_still=0)
+                        print("here4")
                         self.ind_cam_k += 1
                         self.ind_object = 0
                         self.not_f7 = False

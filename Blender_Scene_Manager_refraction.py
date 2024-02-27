@@ -4,10 +4,10 @@ import numpy as np
 def generate_blender_scene():
 
     # PATH
-    object_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.obj"
-    object_texture_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma_normal.png"
+    object_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma_07.obj"
+    object_texture_path = "D:/PhD/Dropbox/Data/Data/models/Graphosoma/Graphosoma.png"
     medium_path = ""
-    output_path = ("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50_normal/")
+    output_path = ("D:/output_blender_4k/")
 
     # GENERATE CAMERAS
     #    - sphere_cameras (cameras on a sphere of choosen radius
@@ -15,21 +15,24 @@ def generate_blender_scene():
     #    - single_camera (give your location and rotation/look_at)
     #    - multi_cameras (gives your locations and details)
     cm = CameraManager()
-    size = (612,512)
+    #size = (612,512)
     # ortho = 1.7
     # perspec = 50
-    # cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
-    cam_data = np.load("D:/PhD/Projects/Playing_with_NeuS/data/buddhaPNG_Med100_Im3-60/cameras.npz")
-    for k in range(20):
-        P = cam_data["world_mat_{}".format(k)][:3,:]
+    #cm.sphere_cameras(radius=5,number_cameras=20,lens=4,type="orthographic")
+    #cam_data = np.load("D:/PhD/Projects/Playing_with_NeuS/data/buddhaPNG_Med100_Im3-60/cameras.npz")
+    #for k in range(20):
+    #    P = cam_data["world_mat_{}".format(k)][:3,:]
 
-    R = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/R.npy")
-    T = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/T.npy")
-    C = []
-    for k in range(R.shape[2]):
-        C.append((-R[:,:,k].reshape(3,3).T @ T[:,[k]]).reshape(3))
-    cm.from_camera_RT(C,lens=50)
-    #cm.sphere_cameras(radius=5, number_cameras=50, lens=50, type="perspective",size=size)
+    #R = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/R.npy")
+    #T = np.load("D:/PhD/Projects/Playing_with_NeuS/data/Graphosoma_RMVS_50/T.npy")
+    #C = []
+    #for k in range(R.shape[2]):
+    #    C.append((-R[:,:,k].reshape(3,3).T @ T[:,[k]]).reshape(3))
+    #cm.from_camera_RT(C,lens=50)
+    cm.sphere_cameras(radius=5, number_cameras=20, lens=50, type="perspective")
+    cm.size = (1920, 1080) #2k
+    #cm.size = (3840,2160) #4k
+    #cm.size = (7680, 4320) #8k
     #cm.single_camera(location=[-10,0,0],rotation=[0,0,0],lens=1.7,is_looking_at=True,looking_at=[0.0,0.0,0.0],type="orthographic")
     #cm.multi_cameras(locations=[[3,0,0],[0,3,0],[0,0,3]],rotations=[[0,0,0],[0,0,0],[0,0,0]],lens=50,is_looking_at=True,looking_at=[[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]],type="perspective")
     #cm.cameras = [cm.cameras[0]]

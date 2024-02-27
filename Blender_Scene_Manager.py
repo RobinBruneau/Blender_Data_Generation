@@ -56,7 +56,7 @@ def generate_blender_scene():
     #for k in range(R.shape[2]):
     #    lights.append(lights_data["cam_{}".format(k)])
     #lm.from_ligth_npz(cameras=cm.cameras,lights=lights, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[np.pi for i in range(len(cm.cameras))])
-    lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=3, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
+    #lm.semi_sphere_directionnal_per_camera(cameras=cm.cameras, number_lights=3, colors=[(1.0, 1.0, 1.0) for i in range(len(cm.cameras))],strengths=[2.5 for i in range(len(cm.cameras))], max_angle=67.5)
     #lm.fixed_directionnals(directions=[np.array([1.0,0.0,0.0]).reshape(3,1),np.array([0.0,1.0,0.0]).reshape(3,1),np.array([0.0,0.0,1.0]).reshape(3,1)],colors = [(1.0,1.0,1.0) for i in range(3)],strengths = [np.pi,np.pi,np.pi])
 
     # OBJECT

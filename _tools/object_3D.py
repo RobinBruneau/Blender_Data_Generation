@@ -1,5 +1,6 @@
 import pickle
 import numpy as np
+import json
 
 def vector_to_array(v):
     return np.array([v.x,v.y,v.z])
@@ -97,6 +98,29 @@ class object_3D():
         pickle.dump(data,f,protocol=pickle.HIGHEST_PROTOCOL)
         f.close()
         np.savez(output_file[:-3] + "npz", **data2)
+
+
+    def save_data_as_json(self,output_file):
+        tab_vertices = np.zeros((len(self.vertices),3))
+        tab_faces = np.zeros((len(self.faces),3))
+        tab_normals = np.zeros((len(self.faces),3))
+        tab_centers = np.zeros((len(self.faces),3))
+
+        for k,vv in enumerate(self.vertices):
+            tab_vertices[k,:] = vv.position
+        for k, ff in enumerate(self.faces):
+            tab_faces[k, 0] = ff.vertices[0].id
+            tab_faces[k, 1] = ff.vertices[1].id
+            tab_faces[k, 2] = ff.vertices[2].id
+            tab_normals[k,:] = ff.normal
+            tab_centers[k,:] = ff.center
+
+
+        f=open(output_file,'w')
+        data = {"vertices":tab_vertices.tolist(),"faces":tab_faces.tolist(),"centers":tab_centers.tolist(),"normals":tab_normals.tolist()}
+        data2 = {"vertices": tab_vertices.T.tolist(), "faces": tab_faces.T.tolist(), "centers": tab_centers.T.tolist(), "normals": tab_normals.T.tolist()}
+        json.dump(data,f,indent=4)
+        f.close()
 
     def check_doublon(self):
 
